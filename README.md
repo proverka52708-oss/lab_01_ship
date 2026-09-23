@@ -10,16 +10,16 @@
 
 ## Що вивчається
 
-- call stack, heap і принцип run-to-completion;
-- task queue та microtask queue;
-- порядок виконання синхронного коду, Promise і таймерів;
-- робота `requestAnimationFrame` у циклі браузера;
-- ES-модулі, `import` і `export`;
-- блочна область видимості `let` і `const`;
-- замикання для збереження стану клавіатури;
-- Canvas 2D API та трансформації `translate` і `rotate`;
-- фіксований timestep і інтерполяція стану між кадрами;
-- вплив блокування головного потоку на плавність гри.
+call stack, heap і принцип run-to-completion;
+task queue та microtask queue;
+порядок виконання синхронного коду, Promise і таймерів;
+робота `requestAnimationFrame` у циклі браузера;
+ES-модулі, `import` і `export`;
+блочна область видимості `let` і `const`;
+замикання для збереження стану клавіатури;
+Canvas 2D API та трансформації `translate` і `rotate`;
+фіксований timestep і інтерполяція стану між кадрами;
+вплив блокування головного потоку на плавність гри.
 
 ## Запуск
 
@@ -165,4 +165,4 @@ while (performance.now() < end) {}
 
 ## Автор
 
-Індивідуальна лабораторна робота з курсу JavaScript.
+Шевченко Максим Віталійович 
