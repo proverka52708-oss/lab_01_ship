@@ -23,6 +23,8 @@ function drawStars(context, width, height) {
 }
 
 export function drawShip(context, previous, current, alpha) {
+  if (current.destroyed) return
+
   const ship = {
     x: lerp(previous.x, current.x, alpha),
     y: lerp(previous.y, current.y, alpha),
@@ -33,6 +35,7 @@ export function drawShip(context, previous, current, alpha) {
   context.save()
   context.translate(ship.x, ship.y)
   context.rotate(ship.angle)
+  if (current.invulnerable) context.globalAlpha = 0.55
 
   if (ship.thrust) {
     context.beginPath()
@@ -96,14 +99,71 @@ function drawAsteroids(context, world) {
   }
 }
 
+function drawPickups(context, world) {
+  for (const pickup of world.ofKind('pickup')) {
+    context.save()
+    context.translate(pickup.pos.x, pickup.pos.y)
+    context.rotate(pickup.angle)
+    context.strokeStyle = pickup.effect === 'shield' ? '#67e8f9' : '#fbbf24'
+    context.fillStyle = 'rgba(15, 23, 42, 0.9)'
+    context.lineWidth = 3
+    context.beginPath()
+    context.arc(0, 0, pickup.radius, 0, Math.PI * 2)
+    context.fill()
+    context.stroke()
+    context.fillStyle = context.strokeStyle
+    context.font = 'bold 16px Consolas, monospace'
+    context.textAlign = 'center'
+    context.textBaseline = 'middle'
+    context.fillText(pickup.effect === 'shield' ? 'S' : 'F', 0, 1)
+    context.restore()
+  }
+}
+
+function drawExplosions(context, world) {
+  for (const explosion of world.ofKind('explosion')) {
+    const progress = explosion.progress
+    context.save()
+    context.globalAlpha = 1 - progress
+    context.strokeStyle = '#fb923c'
+    context.lineWidth = 3
+
+    for (let index = 0; index < 8; index += 1) {
+      const angle = (index / 8) * Math.PI * 2
+      const inner = explosion.radius * progress * 0.45
+      const outer = explosion.radius * (0.35 + progress * 0.65)
+      context.beginPath()
+      context.moveTo(
+        explosion.pos.x + Math.cos(angle) * inner,
+        explosion.pos.y + Math.sin(angle) * inner,
+      )
+      context.lineTo(
+        explosion.pos.x + Math.cos(angle) * outer,
+        explosion.pos.y + Math.sin(angle) * outer,
+      )
+      context.stroke()
+    }
+
+    context.restore()
+  }
+}
+
 export function drawHud(context, stats) {
   context.fillStyle = 'rgba(2, 8, 23, 0.78)'
-  context.fillRect(16, 16, 190, 86)
+  context.fillRect(16, 16, 220, 190)
   context.fillStyle = '#e0f2fe'
   context.font = '14px Consolas, monospace'
   context.fillText(`steps/s: ${stats.stepsPerSecond}`, 28, 40)
   context.fillText(`frames/s: ${stats.framesPerSecond}`, 28, 62)
   context.fillText(`frame: ${stats.frameTime.toFixed(2)} ms`, 28, 84)
+  context.fillText(`score: ${stats.score}`, 28, 106)
+  context.fillText(`hull: ${stats.hp}/100`, 28, 128)
+  if (stats.shieldTime > 0) {
+    context.fillText(`shield: ${stats.shieldTime.toFixed(1)}s`, 28, 150)
+  }
+  if (stats.rapidFireTime > 0) {
+    context.fillText(`rapid: ${stats.rapidFireTime.toFixed(1)}s`, 28, 172)
+  }
 }
 
 export function drawScene(
@@ -118,7 +178,9 @@ export function drawScene(
 ) {
   drawStars(context, width, height)
   drawAsteroids(context, world)
+  drawPickups(context, world)
   drawBullets(context, world)
+  drawExplosions(context, world)
   drawShip(context, previous, current, alpha)
   drawHud(context, stats)
 }

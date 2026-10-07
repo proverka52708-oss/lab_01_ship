@@ -17,13 +17,20 @@ export class Entity {
     this.radius = radius
     this.alive = true
     this.kind = kind
+    this.behaviors = new Set()
   }
 
   get id() {
     return this.#id
   }
 
+  addBehavior(behavior) {
+    this.behaviors.add(behavior)
+    return this
+  }
+
   update(dt) {
+    for (const behavior of this.behaviors) behavior.update(this, dt)
     this.pos = this.pos.add(this.vel.scale(dt))
   }
 }

@@ -6,10 +6,12 @@ export function circlesOverlap(first, second) {
   return dx * dx + dy * dy <= combinedRadius * combinedRadius
 }
 
-export function resolveBulletAsteroidCollisions(world) {
-  let collisionCount = 0
+export function resolveCollisions(world) {
+  const events = []
   const bullets = [...world.ofKind('bullet')]
   const asteroids = [...world.ofKind('asteroid')]
+  const ship = [...world.ofKind('ship')][0]
+  const pickups = [...world.ofKind('pickup')]
 
   for (const bullet of bullets) {
     for (const asteroid of asteroids) {
@@ -17,11 +19,33 @@ export function resolveBulletAsteroidCollisions(world) {
       if (!asteroid.alive || !circlesOverlap(bullet, asteroid)) continue
 
       world.despawn(bullet.id)
-      world.despawn(asteroid.id)
-      collisionCount += 1
+      const destroyed = asteroid.takeDamage(1)
+      if (destroyed) world.despawn(asteroid.id)
+      events.push({ type: destroyed ? 'asteroid-destroyed' : 'asteroid-hit', asteroid })
       break
     }
   }
 
-  return collisionCount
+  if (ship && !ship.destroyed) {
+    for (const asteroid of asteroids) {
+      if (!asteroid.alive || !circlesOverlap(ship, asteroid)) continue
+
+      const previousHp = ship.hp
+      const destroyed = ship.takeDamage(25)
+      if (ship.hp < previousHp) {
+        events.push({ type: destroyed ? 'ship-destroyed' : 'ship-hit', ship })
+      }
+      break
+    }
+
+    for (const pickup of pickups) {
+      if (!pickup.alive || !circlesOverlap(ship, pickup)) continue
+
+      ship.activatePickup(pickup.effect)
+      world.despawn(pickup.id)
+      events.push({ type: 'pickup-collected', pickup })
+    }
+  }
+
+  return events
 }
