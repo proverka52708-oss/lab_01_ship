@@ -1,0 +1,25 @@
+{
+  "rooms": [
+    {
+      "id": "training",
+      "name": "Training Orbit",
+      "players": 1,
+      "capacity": 4,
+      "arena": "standard"
+    },
+    {
+      "id": "deep-space",
+      "name": "Deep Space",
+      "players": 2,
+      "capacity": 4,
+      "arena": "wide"
+    },
+    {
+      "id": "asteroid-belt",
+      "name": "Asteroid Belt",
+      "players": 0,
+      "capacity": 2,
+      "arena": "compact"
+    }
+  ]
+}

@@ -22,7 +22,7 @@ function drawStars(context, width, height) {
   }
 }
 
-export function drawShip(context, previous, current, alpha) {
+export function drawShip(context, previous, current, alpha, spriteSheet) {
   if (current.destroyed) return
 
   const ship = {
@@ -37,7 +37,7 @@ export function drawShip(context, previous, current, alpha) {
   context.rotate(ship.angle)
   if (current.invulnerable) context.globalAlpha = 0.55
 
-  if (ship.thrust) {
+  if (ship.thrust && !spriteSheet) {
     context.beginPath()
     context.moveTo(-16, 0)
     context.lineTo(-30, 7)
@@ -48,53 +48,77 @@ export function drawShip(context, previous, current, alpha) {
     context.fill()
   }
 
-  context.beginPath()
-  context.moveTo(24, 0)
-  context.lineTo(-16, 13)
-  context.lineTo(-8, 0)
-  context.lineTo(-16, -13)
-  context.closePath()
-  context.fillStyle = '#38bdf8'
-  context.fill()
-  context.strokeStyle = '#e0f2fe'
-  context.lineWidth = 2
-  context.stroke()
+  if (spriteSheet) {
+    context.drawImage(spriteSheet, 0, 0, 64, 64, -28, -28, 56, 56)
+  } else {
+    context.beginPath()
+    context.moveTo(24, 0)
+    context.lineTo(-16, 13)
+    context.lineTo(-8, 0)
+    context.lineTo(-16, -13)
+    context.closePath()
+    context.fillStyle = '#38bdf8'
+    context.fill()
+    context.strokeStyle = '#e0f2fe'
+    context.lineWidth = 2
+    context.stroke()
+  }
 
   context.restore()
 }
 
-function drawBullets(context, world) {
+function drawBullets(context, world, spriteSheet) {
   for (const bullet of world.ofKind('bullet')) {
-    context.beginPath()
-    context.arc(bullet.pos.x, bullet.pos.y, bullet.radius, 0, Math.PI * 2)
-    context.fillStyle = '#fcd34d'
-    context.fill()
+    if (spriteSheet) {
+      context.drawImage(
+        spriteSheet,
+        128,
+        0,
+        64,
+        64,
+        bullet.pos.x - 8,
+        bullet.pos.y - 8,
+        16,
+        16,
+      )
+    } else {
+      context.beginPath()
+      context.arc(bullet.pos.x, bullet.pos.y, bullet.radius, 0, Math.PI * 2)
+      context.fillStyle = '#fcd34d'
+      context.fill()
+    }
   }
 }
 
-function drawAsteroids(context, world) {
+function drawAsteroids(context, world, spriteSheet) {
   for (const asteroid of world.ofKind('asteroid')) {
     context.save()
     context.translate(asteroid.pos.x, asteroid.pos.y)
     context.rotate(asteroid.angle)
-    context.beginPath()
+    if (spriteSheet) {
+      const spriteX = asteroid.radius > 30 ? 192 : 64
+      const size = asteroid.radius * 2.4
+      context.drawImage(spriteSheet, spriteX, 0, 64, 64, -size / 2, -size / 2, size, size)
+    } else {
+      context.beginPath()
 
-    for (let index = 0; index < 10; index += 1) {
-      const angle = (index / 10) * Math.PI * 2
-      const variation = index % 2 === 0 ? 0.9 : 1.08
-      const x = Math.cos(angle) * asteroid.radius * variation
-      const y = Math.sin(angle) * asteroid.radius * variation
+      for (let index = 0; index < 10; index += 1) {
+        const angle = (index / 10) * Math.PI * 2
+        const variation = index % 2 === 0 ? 0.9 : 1.08
+        const x = Math.cos(angle) * asteroid.radius * variation
+        const y = Math.sin(angle) * asteroid.radius * variation
 
-      if (index === 0) context.moveTo(x, y)
-      else context.lineTo(x, y)
+        if (index === 0) context.moveTo(x, y)
+        else context.lineTo(x, y)
+      }
+
+      context.closePath()
+      context.fillStyle = '#334155'
+      context.strokeStyle = '#94a3b8'
+      context.lineWidth = 2
+      context.fill()
+      context.stroke()
     }
-
-    context.closePath()
-    context.fillStyle = '#334155'
-    context.strokeStyle = '#94a3b8'
-    context.lineWidth = 2
-    context.fill()
-    context.stroke()
     context.restore()
   }
 }
@@ -150,7 +174,7 @@ function drawExplosions(context, world) {
 
 export function drawHud(context, stats) {
   context.fillStyle = 'rgba(2, 8, 23, 0.78)'
-  context.fillRect(16, 16, 220, 190)
+  context.fillRect(16, 16, 240, 218)
   context.fillStyle = '#e0f2fe'
   context.font = '14px Consolas, monospace'
   context.fillText(`steps/s: ${stats.stepsPerSecond}`, 28, 40)
@@ -164,6 +188,8 @@ export function drawHud(context, stats) {
   if (stats.rapidFireTime > 0) {
     context.fillText(`rapid: ${stats.rapidFireTime.toFixed(1)}s`, 28, 172)
   }
+  context.fillText(`pilot: ${stats.playerName || 'Pilot'}`, 28, 194)
+  context.fillText(`room: ${stats.roomName || 'Training Orbit'}`, 28, 216)
 }
 
 export function drawScene(
@@ -175,12 +201,29 @@ export function drawScene(
   alpha,
   stats,
   world,
+  spriteSheet,
 ) {
   drawStars(context, width, height)
-  drawAsteroids(context, world)
+  drawAsteroids(context, world, spriteSheet)
   drawPickups(context, world)
-  drawBullets(context, world)
+  drawBullets(context, world, spriteSheet)
   drawExplosions(context, world)
-  drawShip(context, previous, current, alpha)
+  drawShip(context, previous, current, alpha, spriteSheet)
   drawHud(context, stats)
+}
+
+export function drawLoading(context, width, height, progress, completed, total, status) {
+  drawStars(context, width, height)
+  context.fillStyle = '#f0f9ff'
+  context.font = 'bold 32px Segoe UI, sans-serif'
+  context.fillText('Preparing your flight', 32, height / 2 - 50)
+  context.fillStyle = '#94a3b8'
+  context.font = '15px Consolas, monospace'
+  context.fillText(status, 34, height / 2 - 18)
+  context.fillStyle = 'rgba(15, 23, 42, 0.9)'
+  context.fillRect(32, height / 2 + 2, Math.min(420, width - 64), 14)
+  context.fillStyle = '#67e8f9'
+  context.fillRect(32, height / 2 + 2, Math.min(420, width - 64) * progress, 14)
+  context.fillStyle = '#cbd5e1'
+  context.fillText(`${completed}/${total} resources`, 32, height / 2 + 42)
 }

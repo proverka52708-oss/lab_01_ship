@@ -86,3 +86,188 @@ canvas {
     margin-top: 12px;
   }
 }
+
+.game-stage {
+  position: relative;
+}
+
+.stage-overlay {
+  position: absolute;
+  inset: 1px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.stage-overlay:empty {
+  display: none;
+}
+
+.error-panel {
+  width: min(520px, calc(100% - 32px));
+  padding: 24px;
+  color: #e0f2fe;
+  background: rgba(2, 8, 23, 0.96);
+  border: 1px solid #b45309;
+  border-radius: 6px;
+  pointer-events: auto;
+}
+
+.error-panel h2,
+.lobby-panel h2 {
+  margin: 0;
+  color: #f0f9ff;
+  font-size: 22px;
+}
+
+.error-panel p {
+  color: #cbd5e1;
+  white-space: pre-wrap;
+}
+
+.game-header h1 {
+  font-size: 38px;
+}
+
+.lobby-panel {
+  margin-top: 18px;
+  padding: 20px 0 0;
+  border-top: 1px solid #164e63;
+}
+
+.lobby-heading,
+.join-form,
+.lobby-tools {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.lobby-heading {
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.status-light {
+  color: #fbbf24;
+  font:
+    12px Consolas,
+    monospace;
+}
+
+.status-light.is-ready {
+  color: #86efac;
+}
+
+.join-form label {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.join-form input,
+.join-form select {
+  min-height: 42px;
+  padding: 0 12px;
+  color: #e0f2fe;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  font: inherit;
+}
+
+button {
+  min-height: 42px;
+  padding: 0 16px;
+  color: #082f49;
+  background: #67e8f9;
+  border: 0;
+  border-radius: 4px;
+  font:
+    600 14px 'Segoe UI',
+    sans-serif;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #a5f3fc;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.lobby-tools {
+  justify-content: flex-start;
+  margin-top: 12px;
+}
+
+.quiet-button,
+.back-button {
+  min-height: 34px;
+  padding: 0 10px;
+  color: #bae6fd;
+  background: transparent;
+  border: 1px solid #155e75;
+  font-size: 12px;
+}
+
+.lobby-feedback,
+.optional-assets-note {
+  min-height: 20px;
+  margin-top: 12px;
+  color: #94a3b8;
+  font:
+    12px Consolas,
+    monospace;
+}
+
+.optional-assets-note {
+  color: #fbbf24;
+}
+
+.failure-results {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  margin: 8px 0 0;
+  list-style: none;
+  font:
+    12px Consolas,
+    monospace;
+}
+
+.test-passed {
+  color: #86efac;
+}
+
+.test-failed {
+  color: #fca5a5;
+}
+
+.stage-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+@media (max-width: 640px) {
+  .join-form,
+  .lobby-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lobby-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .game-header h1 {
+    font-size: 32px;
+  }
+}

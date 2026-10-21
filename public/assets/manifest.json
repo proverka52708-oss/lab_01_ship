@@ -1,0 +1,12 @@
+{
+  "sprites": [{ "id": "sheet", "url": "/assets/sprites.svg", "required": true }],
+  "sounds": [
+    { "id": "shoot", "url": "/assets/shoot.wav", "required": false },
+    { "id": "hit", "url": "/assets/hit.wav", "required": false },
+    { "id": "exploded", "url": "/assets/explosion.wav", "required": false }
+  ],
+  "data": [
+    { "id": "arena", "url": "/api/arena.json", "required": true },
+    { "id": "rooms", "url": "/api/rooms.json", "required": true }
+  ]
+}
