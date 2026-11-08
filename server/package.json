@@ -1,0 +1,14 @@
+{
+  "name": "@star-runner/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js",
+    "test": "node --test",
+    "benchmark": "node scripts/rss-benchmark.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

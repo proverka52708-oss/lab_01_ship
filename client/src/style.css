@@ -271,3 +271,69 @@ button:disabled {
     font-size: 32px;
   }
 }
+
+.network-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #164e63;
+}
+
+.network-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.network-heading h2 {
+  margin: 0;
+  color: #f0f9ff;
+  font-size: 20px;
+}
+
+.network-notice {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.chat-messages {
+  display: grid;
+  gap: 4px;
+  max-height: 160px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-messages li {
+  overflow-wrap: anywhere;
+}
+
+.chat-form {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-form input {
+  min-width: 0;
+  flex: 1;
+  min-height: 42px;
+  padding: 0 12px;
+  color: #e0f2fe;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}

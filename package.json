@@ -1,17 +1,21 @@
 {
-  "name": "my-game",
-  "version": "0.0.0",
+  "name": "star-runner",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "node server/scripts/dev.js",
+    "build": "npm run build --workspace client",
+    "start": "npm run start --workspace server",
+    "test": "npm run test --workspace server",
+    "benchmark": "npm run benchmark --workspace server",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "prettier": "^3.9.8",
-    "vite": "^8.3.0"
+    "prettier": "^3.9.8"
   }
 }
