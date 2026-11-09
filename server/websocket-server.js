@@ -1,4 +1,6 @@
 import { WebSocketServer } from "ws";
+import { decodeBinary, encodeBinary } from "@dogfight/shared/codec";
+import { validateInputCommand } from "@dogfight/shared/protocol";
 
 const MAX_MESSAGE_BYTES = 1024;
 const RATE_LIMIT_PER_SECOND = 20;
@@ -12,7 +14,17 @@ function closeForProtocol(socket, code, reason) {
 }
 
 function parseMessage(data, isBinary) {
-  if (isBinary) return { error: { code: 1003, reason: "Text messages only" } };
+  if (isBinary) {
+    try {
+      const message = decodeBinary(data);
+      if (message.type !== "input" && message.type !== "ping") {
+        return { error: { code: 1003, reason: "Unsupported client packet" } };
+      }
+      return { value: message };
+    } catch {
+      return { error: { code: 1002, reason: "Invalid binary packet" } };
+    }
+  }
   if (data.length > MAX_MESSAGE_BYTES) {
     return { error: { code: 1009, reason: "Message exceeds 1024 bytes" } };
   }
@@ -30,12 +42,17 @@ function parseMessage(data, isBinary) {
   const keys = Object.keys(message);
   if (message.type === "join") {
     if (
-      keys.some((key) => !["type", "roomId", "playerName"].includes(key)) ||
+      keys.some(
+        (key) =>
+          !["type", "roomId", "playerName", "codec"].includes(key),
+      ) ||
       typeof message.roomId !== "string" ||
       !/^[a-z0-9-]{1,32}$/.test(message.roomId) ||
       typeof message.playerName !== "string" ||
       message.playerName.trim().length < 1 ||
-      message.playerName.trim().length > 18
+      message.playerName.trim().length > 18 ||
+      (message.codec !== undefined &&
+        !["json", "binary"].includes(message.codec))
     ) {
       return { error: { code: 1008, reason: "Invalid join message" } };
     }
@@ -60,6 +77,46 @@ function parseMessage(data, isBinary) {
     return { value: { ...message, text: message.text.trim() } };
   }
 
+  if (message.type === "input") {
+    if (
+      keys.some(
+        (key) =>
+          !["type", "version", "seq", "tick", "turn", "thrust", "brake", "fire"].includes(key),
+      ) ||
+      message.version !== 0
+    ) {
+      return { error: { code: 1008, reason: "Invalid input message" } };
+    }
+    try {
+      return {
+        value: {
+          type: "input",
+          ...validateInputCommand({
+            seq: message.seq,
+            tick: message.tick,
+            turn: message.turn,
+            thrust: message.thrust,
+            brake: message.brake,
+            fire: message.fire,
+          }),
+        },
+      };
+    } catch {
+      return { error: { code: 1008, reason: "Invalid input message" } };
+    }
+  }
+
+  if (message.type === "ping") {
+    if (
+      keys.some((key) => !["type", "version", "sentAt"].includes(key)) ||
+      message.version !== 0 ||
+      !Number.isFinite(message.sentAt)
+    ) {
+      return { error: { code: 1008, reason: "Invalid ping message" } };
+    }
+    return { value: { type: "ping", sentAt: message.sentAt } };
+  }
+
   return { error: { code: 1008, reason: "Unknown message type" } };
 }
 
@@ -70,6 +127,37 @@ export function attachWebSocketServer(server, { roomManager, getMatchLogger }) {
     perMessageDeflate: false,
   });
   const connections = new Map();
+  const roomSnapshotHandlers = new Map();
+
+  function attachRoom(room) {
+    if (!room || roomSnapshotHandlers.has(room)) return;
+    const handler = (snapshot) => {
+      let binary;
+      for (const [client, state] of connections) {
+        if (state.room !== room || client.readyState !== 1) continue;
+        if (client.bufferedAmount > MAX_BUFFERED_BYTES) continue;
+        const payload =
+          state.codec === "binary"
+            ? (binary ??= Buffer.from(encodeBinary(snapshot)))
+            : JSON.stringify({ version: 0, ...snapshot });
+        client.send(payload);
+      }
+    };
+    room.on("snapshot", handler);
+    roomSnapshotHandlers.set(room, handler);
+  }
+
+  for (const summary of roomManager.list()) attachRoom(roomManager.get(summary.id));
+  const onRoomCreated = (summary) => attachRoom(roomManager.get(summary.id));
+  roomManager.on("room-created", onRoomCreated);
+  roomManager.on("room-removed", (summary) => {
+    const room = [...roomSnapshotHandlers.keys()].find(
+      (candidate) => candidate.id === summary.id,
+    );
+    if (!room) return;
+    room.off("snapshot", roomSnapshotHandlers.get(room));
+    roomSnapshotHandlers.delete(room);
+  });
 
   server.on("upgrade", (request, socket, head) => {
     let pathname;
@@ -94,6 +182,7 @@ export function attachWebSocketServer(server, { roomManager, getMatchLogger }) {
       missedPongs: 0,
       room: null,
       player: null,
+      codec: "json",
       messageTimes: [],
     };
     connections.set(client, state);
@@ -171,6 +260,7 @@ export function attachWebSocketServer(server, { roomManager, getMatchLogger }) {
       const player = room.join(client, message.playerName, logger.matchId);
       state.room = room;
       state.player = player;
+      state.codec = message.codec ?? "json";
       clearTimeout(joinTimer);
       return;
     }
@@ -193,6 +283,32 @@ export function attachWebSocketServer(server, { roomManager, getMatchLogger }) {
         return;
       }
       state.room.chat(client, message.text);
+      return;
+    }
+
+    if (message.type === "input") {
+      if (!state.room?.match || !state.player) return;
+      try {
+        state.room.match.enqueueInput(state.player.id, message);
+      } catch (error) {
+        client.send(
+          JSON.stringify({ type: "server-error", message: error.message }),
+        );
+      }
+      return;
+    }
+
+    if (message.type === "ping") {
+      const pong = {
+        type: "pong",
+        tick: state.room?.match?.tick ?? 0,
+        sentAt: message.sentAt,
+      };
+      client.send(
+        state.codec === "binary"
+          ? Buffer.from(encodeBinary(pong))
+          : JSON.stringify({ version: 0, ...pong }),
+      );
     }
   }
 
@@ -216,6 +332,11 @@ export function attachWebSocketServer(server, { roomManager, getMatchLogger }) {
     server: websocketServer,
     async close() {
       clearInterval(heartbeat);
+      roomManager.off("room-created", onRoomCreated);
+      for (const [room, handler] of roomSnapshotHandlers) {
+        room.off("snapshot", handler);
+      }
+      roomSnapshotHandlers.clear();
       const clients = [...websocketServer.clients];
       for (const client of clients) {
         client.close(1001, "Server shutting down");

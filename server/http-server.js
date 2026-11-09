@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { extname, resolve, sep } from "node:path";
 import { pipeline } from "node:stream";
 import { MatchLogManager } from "./match-logger.js";
+import { MatchManager } from "./match.js";
 import { RoomManager } from "./room-manager.js";
 import { attachWebSocketServer } from "./websocket-server.js";
 
@@ -137,6 +138,7 @@ function testEndpoint(request, response, pathname) {
 
 export async function createApplication(config) {
   const roomManager = await new RoomManager().load(config.roomDefinitions);
+  const matchManager = new MatchManager(roomManager);
   const logs = new MatchLogManager(config.logDirectory);
   const activeLogs = new Map();
   roomManager.on("room-removed", (room) => activeLogs.delete(room.id));
@@ -192,6 +194,10 @@ export async function createApplication(config) {
     if (url.pathname === "/api/rooms") {
       if (request.method === "GET") {
         sendJson(response, 200, { rooms: roomManager.list() });
+        return;
+      }
+      if (url.pathname === "/api/matches/stats" && request.method === "GET") {
+        sendJson(response, 200, matchManager.stats());
         return;
       }
       if (request.method === "POST") {
@@ -254,6 +260,7 @@ export async function createApplication(config) {
 
   const websocket = attachWebSocketServer(server, {
     roomManager,
+    matchManager,
     getMatchLogger,
   });
 
@@ -264,6 +271,7 @@ export async function createApplication(config) {
     websocket,
     async close() {
       await websocket.close();
+      matchManager.close();
       roomManager.close();
       await logs.close();
     },

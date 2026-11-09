@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
+    "test": "node --test",
     "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@dogfight/shared": "*"
   },
   "devDependencies": {
     "vite": "^8.3.0"

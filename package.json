@@ -4,14 +4,16 @@
   "type": "module",
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "shared"
   ],
   "scripts": {
     "dev": "node server/scripts/dev.js",
     "build": "npm run build --workspace client",
     "start": "npm run start --workspace server",
-    "test": "npm run test --workspace server",
+    "test": "npm run test --workspaces --if-present",
     "benchmark": "npm run benchmark --workspace server",
+    "benchmark:netcode": "node server/scripts/netcode-benchmark.js",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

@@ -3,12 +3,14 @@ import { setupCanvas } from './render/canvas.js'
 import { drawLoading } from './render/draw.js'
 import { fetchJson, loadAll, loadJson, withRetry } from './assets/loader.js'
 import { runFailureGallery, compareLoadingTimes } from './assets/failure-gallery.js'
-import { createGameSession } from './game/game-session.js'
 import { Lobby } from './lobby/lobby.js'
 import { mountLobbyView } from './lobby/view.js'
 import { GameEvents } from './audio/game-events.js'
 import { createAudioPlayer } from './audio/audio-player.js'
 import { SocketClient } from './net/socket-client.js'
+import { NetworkEmulator } from './network-emulator.js'
+import { createNetworkGameSession } from './game/network-game-session.js'
+import { decodeBinary, encodeBinary } from '@dogfight/shared/codec'
 
 const app = document.querySelector('#app')
 app.innerHTML = `
@@ -38,6 +40,22 @@ app.innerHTML = `
         <input id="chatInput" name="message" maxlength="300" autocomplete="off" placeholder="Type a message..." required />
         <button type="submit">Send</button>
       </form>
+      <details class="network-tools">
+        <summary>Network experiments</summary>
+        <label>Codec
+          <select id="networkCodec">
+            <option value="json">JSON</option>
+            <option value="binary">Binary DataView</option>
+          </select>
+        </label>
+        <label>Delay <input id="networkDelay" type="range" min="0" max="300" step="10" value="0" /><output id="networkDelayValue">0 ms</output></label>
+        <label>Jitter <input id="networkJitter" type="range" min="0" max="120" step="5" value="0" /><output id="networkJitterValue">0 ms</output></label>
+        <label>Loss <input id="networkLoss" type="range" min="0" max="30" step="1" value="0" /><output id="networkLossValue">0%</output></label>
+        <label>Interpolation <input id="interpolationDelay" type="range" min="0" max="300" step="10" value="100" /><output id="interpolationValue">100 ms</output></label>
+        <p id="netgraph" aria-live="polite">RTT: -- · Snapshot age: -- · Pending input: 0 · Correction: 0 px</p>
+        <button id="measureCodecs" type="button">Compare JSON and binary</button>
+        <pre id="codecMeasurement" aria-live="polite"></pre>
+      </details>
     </section>
   </main>
 `
@@ -55,10 +73,13 @@ let lobbyView = null
 let loadedResources = null
 let loadingController = null
 let socketClient = null
+const networkEmulator = new NetworkEmulator()
+let netgraphTimer = null
 
 function setupSocketClient() {
   if (socketClient) return
   socketClient = new SocketClient()
+  socketClient.setNetworkEmulator(networkEmulator)
   socketClient.addEventListener('status', (event) => {
     const status = document.querySelector('#socketStatus')
     status.textContent = event.detail
@@ -70,6 +91,9 @@ function setupSocketClient() {
     const messages = document.querySelector('#chatMessages')
     if (message.type === 'joined') {
       notice.textContent = `Joined ${message.room.name} as ${message.player.name}`
+      if (currentGame) currentGame.setIdentity(message.player)
+    } else if (message.type === 'snapshot') {
+      currentGame?.receiveSnapshot(message)
     } else if (message.type === 'player-joined') {
       notice.textContent = `${message.player.name} joined the room`
     } else if (message.type === 'player-left') {
@@ -90,6 +114,24 @@ function setupSocketClient() {
   socketClient.addEventListener('socket-error', (event) => {
     document.querySelector('#networkNotice').textContent = event.detail
   })
+  const configureNetwork = () => {
+    networkEmulator.configure({
+      delayMs: Number(document.querySelector('#networkDelay').value),
+      jitterMs: Number(document.querySelector('#networkJitter').value),
+      lossPercent: Number(document.querySelector('#networkLoss').value),
+    })
+    const netcode = currentGame?.netcode
+    netcode?.setInterpolationDelay(Number(document.querySelector('#interpolationDelay').value))
+    document.querySelector('#networkDelayValue').value = `${document.querySelector('#networkDelay').value} ms`
+    document.querySelector('#networkJitterValue').value = `${document.querySelector('#networkJitter').value} ms`
+    document.querySelector('#networkLossValue').value = `${document.querySelector('#networkLoss').value}%`
+    document.querySelector('#interpolationValue').value = `${document.querySelector('#interpolationDelay').value} ms`
+  }
+  for (const id of ['networkDelay', 'networkJitter', 'networkLoss', 'interpolationDelay']) {
+    document.querySelector(`#${id}`).addEventListener('input', configureNetwork)
+  }
+  configureNetwork()
+  document.querySelector('#measureCodecs').addEventListener('click', measureCodecs)
   document.querySelector('#chatForm').addEventListener('submit', (event) => {
     event.preventDefault()
     const input = document.querySelector('#chatInput')
@@ -212,7 +254,11 @@ gameEvents.addEventListener('fired', () => {})
 
 async function joinGame({ roomId, playerName }) {
   await unlockAudio()
-  const { room } = await socketClient.join(roomId, playerName)
+  const { room, player } = await socketClient.join(
+    roomId,
+    playerName,
+    document.querySelector('#networkCodec').value,
+  )
 
   lobby?.leave()
   currentGame?.stop()
@@ -226,23 +272,96 @@ async function joinGame({ roomId, playerName }) {
   backButton.addEventListener('click', returnToLobby)
   tools.append(backButton)
 
-  currentGame = createGameSession({
+  currentGame = createNetworkGameSession({
     canvasView,
     assets: loadedResources,
     events: gameEvents,
     room,
     playerName,
+    player,
+    socketClient,
   })
+  currentGame.netcode.setInterpolationDelay(
+    Number(document.querySelector('#interpolationDelay').value),
+  )
   currentGame.start()
+  clearInterval(netgraphTimer)
+  netgraphTimer = setInterval(updateNetgraph, 250)
 }
 
 function returnToLobby() {
   socketClient?.leave()
+  clearInterval(netgraphTimer)
+  netgraphTimer = null
   currentGame?.stop()
   currentGame = null
   tools.replaceChildren()
   lobbyView?.show()
   void lobby?.enter()
+}
+
+function updateNetgraph() {
+  const element = document.querySelector('#netgraph')
+  if (!element || !currentGame) return
+  const latest = currentGame.netcode.buffer.latest
+  const age = latest ? Math.max(0, performance.now() - latest.receivedAt).toFixed(1) : '--'
+  const traffic = socketClient.traffic()
+  element.textContent =
+    `Codec: ${socketClient.codec.toUpperCase()} · RTT: ${socketClient.rttMs === null ? '--' : `${socketClient.rttMs.toFixed(1)} ms`}` +
+    ` · Snapshot age: ${age} ms · Input pending: ${currentGame.netcode.pendingCount}` +
+    ` · Correction: ${currentGame.netcode.correction.toFixed(2)} px` +
+    ` · Traffic in/out: ${traffic.inboundKilobytesPerSecond.toFixed(1)}/${traffic.outboundKilobytesPerSecond.toFixed(1)} KB/s` +
+    ` · Snapshots: ${socketClient.snapshotCount}`
+}
+
+function measureCodecs() {
+  const snapshot = {
+    type: 'snapshot',
+    tick: 900,
+    acks: [{ entityId: 7, seq: 300 }],
+    entities: [{
+      id: 7,
+      kind: 'ship',
+      x: 120.25,
+      y: 180.5,
+      vx: 42.125,
+      vy: -11.75,
+      angle: -1.57075,
+      radius: 13,
+      hp: 3,
+      thrust: 1,
+      invulnerableTime: 0,
+      shield: false,
+      ownerId: 0,
+      ttl: 0,
+      commandSeq: 0,
+      score: 0,
+    }],
+  }
+  const json = JSON.stringify({ version: 0, ...snapshot })
+  const binary = encodeBinary(snapshot)
+  const repetitions = 5000
+  const jsonStart = performance.now()
+  for (let index = 0; index < repetitions; index += 1) {
+    JSON.parse(json)
+    JSON.stringify({ version: 0, ...snapshot })
+  }
+  const jsonElapsed = performance.now() - jsonStart
+  const binaryStart = performance.now()
+  for (let index = 0; index < repetitions; index += 1) {
+    decodeBinary(binary)
+    encodeBinary(snapshot)
+  }
+  const binaryElapsed = performance.now() - binaryStart
+  document.querySelector('#codecMeasurement').textContent = JSON.stringify({
+    repetitions,
+    snapshotEntities: snapshot.entities.length,
+    jsonBytes: new TextEncoder().encode(json).byteLength,
+    binaryBytes: binary.byteLength,
+    jsonEncodeDecodeUs: Number((jsonElapsed * 1000 / repetitions).toFixed(2)),
+    binaryEncodeDecodeUs: Number((binaryElapsed * 1000 / repetitions).toFixed(2)),
+    note: 'Measure on the same browser/device; timing is workload- and runtime-dependent.',
+  }, null, 2)
 }
 
 window.addEventListener('beforeunload', () => {
@@ -251,6 +370,8 @@ window.addEventListener('beforeunload', () => {
   currentGame?.stop()
   audioPlayer?.destroy()
   socketClient?.destroy()
+  networkEmulator.dispose()
+  clearInterval(netgraphTimer)
   void audioContext?.close()
 })
 

@@ -9,6 +9,7 @@
     "benchmark": "node scripts/rss-benchmark.js"
   },
   "dependencies": {
+    "@dogfight/shared": "*",
     "ws": "^8.18.3"
   }
 }
