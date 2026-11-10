@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch index.js",
-    "start": "node index.js",
+    "dev": "node --watch index.ts",
+    "start": "node index.ts",
     "test": "node --test",
-    "benchmark": "node scripts/rss-benchmark.js"
+    "benchmark": "node scripts/rss-benchmark.ts"
   },
   "dependencies": {
     "@dogfight/shared": "*",
