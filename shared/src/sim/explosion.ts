@@ -7,9 +7,10 @@ import type {
   ExplosionParticleSnapshot,
 } from "./snapshot-types.ts";
 
-interface Particle extends ExplosionParticleSnapshot {
+interface Particle extends Omit<ExplosionParticleSnapshot, "lifetime"> {
   readonly pos: Vector2;
   readonly vel: Vector2;
+  lifetime: number;
   remaining: number;
 }
 
@@ -31,27 +32,61 @@ export class Explosion extends Entity {
       kind: "explosion",
       collidable: false,
     });
-    this.particles = Array.from({ length: particleCount }, () => {
+    this.particles = [];
+    this.reset(x, y, random, particleCount);
+    this.idWasRestored = id !== undefined;
+  }
+
+  reset(
+    x: number,
+    y: number,
+    random: () => number,
+    particleCount = 14,
+  ): void {
+    this.resetForSpawn({
+      pos: { x, y },
+      vel: { x: 0, y: 0 },
+      angle: 0,
+      radius: 0,
+      kind: "explosion",
+      collidable: false,
+    });
+    for (let index = 0; index < particleCount; index += 1) {
       const angle = random() * Math.PI * 2;
       const speed = 35 + random() * 150;
       const lifetime = 0.35 + random() * 0.6;
-      return {
-        pos: this.pos.clone(),
-        vel: Vector2.fromAngle(angle, speed),
-        lifetime,
-        remaining: lifetime,
-      };
-    });
+      const particle = this.particles[index];
+      if (particle) {
+        particle.pos.set(x, y);
+        particle.vel.set(
+          Math.cos(angle) * speed,
+          Math.sin(angle) * speed,
+        );
+        particle.lifetime = lifetime;
+        particle.remaining = lifetime;
+      } else {
+        this.particles.push({
+          pos: new Vector2(x, y),
+          vel: Vector2.fromAngle(angle, speed),
+          lifetime,
+          remaining: lifetime,
+        });
+      }
+    }
+    this.particles.length = particleCount;
   }
 
   update(dt: number): void {
+    let activeCount = 0;
     for (const particle of this.particles) {
       particle.remaining -= dt;
-      particle.pos.addInPlace(particle.vel.scale(dt));
+      particle.pos.addScaledInPlace(particle.vel, dt);
+      if (particle.remaining > 0) {
+        this.particles[activeCount] = particle;
+        activeCount += 1;
+      }
     }
-    this.particles = this.particles.filter(
-      (particle) => particle.remaining > 0,
-    );
+    this.particles.length = activeCount;
     if (this.particles.length === 0) {
       this.alive = false;
     }

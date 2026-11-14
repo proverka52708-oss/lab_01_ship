@@ -48,7 +48,7 @@ export function mountLobbyView(
   const feedback = requiredElement<HTMLElement>(panel, '#lobbyFeedback')
   const results = requiredElement<HTMLOListElement>(panel, '#failureResults')
 
-  lobby.addEventListener('rooms', (event) => {
+  lobby.addEventListener('rooms', () => {
     const rooms = lobby.rooms
     const selected = select.value
     select.replaceChildren(

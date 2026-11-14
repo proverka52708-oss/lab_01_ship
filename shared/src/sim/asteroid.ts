@@ -56,18 +56,16 @@ export class Asteroid extends Entity {
     this.homing?.update(this, world, dt);
     super.update(dt);
     if (this.pos.x < this.radius || this.pos.x > world.width - this.radius) {
-      this.pos.x = Math.max(
-        this.radius,
-        Math.min(world.width - this.radius, this.pos.x),
+      this.pos.setX(
+        Math.max(this.radius, Math.min(world.width - this.radius, this.pos.x)),
       );
-      this.vel.x *= -1;
+      this.vel.setX(-this.vel.x);
     }
     if (this.pos.y < this.radius || this.pos.y > world.height - this.radius) {
-      this.pos.y = Math.max(
-        this.radius,
-        Math.min(world.height - this.radius, this.pos.y),
+      this.pos.setY(
+        Math.max(this.radius, Math.min(world.height - this.radius, this.pos.y)),
       );
-      this.vel.y *= -1;
+      this.vel.setY(-this.vel.y);
     }
   }
 

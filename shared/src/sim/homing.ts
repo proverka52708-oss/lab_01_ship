@@ -1,4 +1,3 @@
-import { Vector2 } from "./vector.ts";
 import type { Entity } from "./entity.ts";
 import type { World } from "./world.ts";
 import type { HomingOptions, HomingSnapshot } from "./snapshot-types.ts";
@@ -38,7 +37,9 @@ export function createHomingBehavior({
         if (candidate.id === entity.id) {
           continue;
         }
-        const distanceSquared = candidate.pos.sub(entity.pos).lengthSquared();
+        const dx = candidate.pos.x - entity.pos.x;
+        const dy = candidate.pos.y - entity.pos.y;
+        const distanceSquared = dx * dx + dy * dy;
         if (distanceSquared < nearestDistanceSquared) {
           nearestDistanceSquared = distanceSquared;
           target = candidate;
@@ -49,19 +50,26 @@ export function createHomingBehavior({
         return;
       }
 
-      const direction = target.pos.sub(entity.pos);
-      if (direction.lengthSquared() === 0) {
+      const directionX = target.pos.x - entity.pos.x;
+      const directionY = target.pos.y - entity.pos.y;
+      if (directionX === 0 && directionY === 0) {
         return;
       }
-      const desiredAngle = Math.atan2(direction.y, direction.x);
+      const desiredAngle = Math.atan2(directionY, directionX);
       const angleChange = shortestAngleDifference(entity.angle, desiredAngle);
       entity.angle += Math.max(
         -turnRate * dt,
         Math.min(turnRate * dt, angleChange),
       );
 
-      const speed = Math.min(maxSpeed, entity.vel.length() + acceleration * dt);
-      entity.vel = Vector2.fromAngle(entity.angle, speed);
+      const speed = Math.min(
+        maxSpeed,
+        Math.hypot(entity.vel.x, entity.vel.y) + acceleration * dt,
+      );
+      entity.vel.set(
+        Math.cos(entity.angle) * speed,
+        Math.sin(entity.angle) * speed,
+      );
     },
   };
 }

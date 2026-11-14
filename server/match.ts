@@ -354,6 +354,7 @@ export class Match extends EventEmitter {
       lastJitterMs: this.lastJitterMs,
       averageJitterMs: average(this.jitters),
       worldEntities: this.world.size,
+      poolStats: this.world.poolStats,
     };
   }
 }

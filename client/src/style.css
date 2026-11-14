@@ -252,7 +252,27 @@ button:disabled {
 .stage-tools {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 10px;
+}
+
+.bot-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bot-controls button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.bot-controls output {
+  color: #94a3b8;
+  font: 12px Consolas, monospace;
 }
 
 @media (max-width: 640px) {

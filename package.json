@@ -11,17 +11,26 @@
     "dev": "node server/scripts/dev.ts",
     "build": "npm run build --workspace client",
     "start": "npm run start --workspace server",
-    "test": "npm run test --workspaces --if-present",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "lint": "oxlint client server shared e2e",
     "typecheck": "tsc --noEmit",
     "benchmark": "npm run benchmark --workspace server",
     "benchmark:netcode": "node server/scripts/netcode-benchmark.ts",
+    "benchmark:load": "npm run build && node server/scripts/load-benchmark.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "fast-check": "^4.10.2",
+    "oxlint": "^1.93.0",
     "prettier": "^3.9.8",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
   },
   "dependencies": {
     "zod": "^4.6.7"

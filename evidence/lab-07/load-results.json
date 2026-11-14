@@ -1,0 +1,104 @@
+{
+  "measuredAt": "2026-11-14T13:07:15.562Z",
+  "results": [
+    {
+      "clients": 8,
+      "samples": 493,
+      "tickDurationMs": {
+        "p50": 0.7721000000001368,
+        "p95": 1.1414000000004307,
+        "p99": 1.3274000000019441,
+        "max": 1.5446000000010827,
+        "over33ms": 0
+      },
+      "aggregateAverageStepMs": 0.827,
+      "transientObjectPool": {
+        "reuseHits": 913,
+        "allocationMisses": 27
+      },
+      "garbageCollectionMs": {
+        "count": 35,
+        "total": 39.737,
+        "max": 3.604
+      },
+      "browserFrames": {
+        "samples": 1837,
+        "p50": 16.69999999999891,
+        "p95": 16.799999999995634,
+        "p99": 16.80000000000109,
+        "longFrames": 0,
+        "maxHeapDeltaBytes": 0
+      },
+      "browserInlineFrames": {
+        "samples": 310,
+        "p50": 16.699999999999818,
+        "p95": 16.700000000000728,
+        "p99": 16.800000000000182,
+        "longFrames": 0
+      }
+    },
+    {
+      "clients": 32,
+      "samples": 86,
+      "tickDurationMs": {
+        "p50": 1.3220000000001164,
+        "p95": 1.6942999999955646,
+        "p99": 2.504899999999907,
+        "max": 2.504899999999907,
+        "over33ms": 0
+      },
+      "aggregateAverageStepMs": 2.693,
+      "transientObjectPool": {
+        "reuseHits": 137,
+        "allocationMisses": 64
+      },
+      "garbageCollectionMs": {
+        "count": 8,
+        "total": 8.867,
+        "max": 2.415
+      }
+    },
+    {
+      "clients": 64,
+      "samples": 184,
+      "tickDurationMs": {
+        "p50": 1.222300000001269,
+        "p95": 1.5947999999989406,
+        "p99": 2.0460999999995693,
+        "max": 2.0918000000019674,
+        "over33ms": 0
+      },
+      "aggregateAverageStepMs": 5.179,
+      "transientObjectPool": {
+        "reuseHits": 463,
+        "allocationMisses": 135
+      },
+      "garbageCollectionMs": {
+        "count": 14,
+        "total": 15.58,
+        "max": 2.182
+      }
+    },
+    {
+      "clients": 128,
+      "samples": 376,
+      "tickDurationMs": {
+        "p50": 1.1980000000039581,
+        "p95": 1.5625,
+        "p99": 2.06420000000071,
+        "max": 2.594199999999546,
+        "over33ms": 0
+      },
+      "aggregateAverageStepMs": 9.504,
+      "transientObjectPool": {
+        "reuseHits": 1148,
+        "allocationMisses": 253
+      },
+      "garbageCollectionMs": {
+        "count": 22,
+        "total": 23.672,
+        "max": 2.191
+      }
+    }
+  ]
+}

@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
-import { after, before, test } from "node:test";
+import { afterAll as after, beforeAll as before, test } from "vitest";
 import WebSocket, { type RawData } from "ws";
 import { z } from "zod";
 import { createApplication } from "../http-server.ts";
@@ -242,6 +242,28 @@ test("invalid binary WebSocket packets close with a protocol error", async () =>
   const closed = once(socket, "close");
   socket.send(Buffer.from([0]));
   assert.equal((await closed)[0], 1002);
+});
+
+test("WebSocket accepts 30 Hz input traffic with a heartbeat", async () => {
+  const socket = await connectSocket();
+  for (let index = 0; index < 31; index += 1) {
+    socket.send(JSON.stringify({ type: "ping", sentAt: index }));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(socket.readyState, WebSocket.OPEN);
+  const closed = once(socket, "close");
+  socket.close();
+  await closed;
+});
+
+test("WebSocket closes clients that exceed the per-second message limit", async () => {
+  const socket = await connectSocket();
+  const closed = once(socket, "close");
+  for (let index = 0; index < 46; index += 1) {
+    socket.send(JSON.stringify({ type: "ping", sentAt: index }));
+  }
+  const [code] = await closed;
+  assert.equal(code, 1008);
 });
 
 test("server configuration validates PORT and LOG_DIR", () => {

@@ -12,7 +12,7 @@ import type { RoomManager } from "./room-manager.ts";
 import type { MatchLogger } from "./match-logger.ts";
 
 const MAX_MESSAGE_BYTES = 1024;
-const RATE_LIMIT_PER_SECOND = 20;
+const RATE_LIMIT_PER_SECOND = 45;
 const MAX_BUFFERED_BYTES = 128 * 1024;
 const JOIN_TIMEOUT_MS = 5000;
 

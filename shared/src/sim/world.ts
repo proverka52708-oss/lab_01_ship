@@ -1,5 +1,5 @@
 import { Asteroid } from "./asteroid.ts";
-import { Bullet } from "./bullet.ts";
+import { Bullet, type BulletOptions } from "./bullet.ts";
 import { collisionPairs, resolveCollisions } from "./collision.ts";
 import { Explosion } from "./explosion.ts";
 import { Pickup } from "./pickup.ts";
@@ -33,6 +33,10 @@ const NO_INPUT = Object.freeze({ isDown: () => false });
 export class World {
   #entities = new Map<number, WorldEntity>();
   #pendingRemoval = new Set<number>();
+  #bulletPool: Bullet[] = [];
+  #explosionPool: Explosion[] = [];
+  #poolHits = 0;
+  #poolMisses = 0;
   #random: RandomSource;
   #seed: number;
   #nextEntityId = 1;
@@ -61,6 +65,15 @@ export class World {
 
   get size() {
     return this.#entities.size;
+  }
+
+  get poolStats() {
+    return {
+      hits: this.#poolHits,
+      misses: this.#poolMisses,
+      availableBullets: this.#bulletPool.length,
+      availableExplosions: this.#explosionPool.length,
+    };
   }
 
   spawn<T extends WorldEntity>(entity: T): T {
@@ -111,7 +124,25 @@ export class World {
   }
 
   createExplosion(x: number, y: number): Explosion {
+    const explosion = this.#explosionPool.pop();
+    if (explosion) {
+      this.#poolHits += 1;
+      explosion.reset(x, y, () => this.random());
+      return explosion;
+    }
+    this.#poolMisses += 1;
     return new Explosion(x, y, () => this.random());
+  }
+
+  createBullet(options: BulletOptions): Bullet {
+    const bullet = this.#bulletPool.pop();
+    if (bullet) {
+      this.#poolHits += 1;
+      bullet.reset(options);
+      return bullet;
+    }
+    this.#poolMisses += 1;
+    return new Bullet(options);
   }
 
   createPickup(x: number, y: number, effect: PickupEffect): Pickup {
@@ -166,8 +197,10 @@ export class World {
         entity.kind === "bullet" ||
         entity.kind === "pickup"
       ) {
-        entity.pos.x = ((entity.pos.x % width) + width) % width;
-        entity.pos.y = ((entity.pos.y % height) + height) % height;
+        entity.pos.set(
+          ((entity.pos.x % width) + width) % width,
+          ((entity.pos.y % height) + height) % height,
+        );
       }
     }
   }
@@ -192,7 +225,13 @@ export class World {
       }
     }
     for (const id of this.#pendingRemoval) {
+      const removed = this.#entities.get(id);
       this.#entities.delete(id);
+      if (removed instanceof Bullet && this.#bulletPool.length < 256) {
+        this.#bulletPool.push(removed);
+      } else if (removed instanceof Explosion && this.#explosionPool.length < 64) {
+        this.#explosionPool.push(removed);
+      }
     }
     this.#pendingRemoval.clear();
     return events;

@@ -5,7 +5,7 @@ import type { HomingBehavior } from "./homing.ts";
 import type { BulletSnapshot, EntityKind } from "./snapshot-types.ts";
 import type { World } from "./world.ts";
 
-interface BulletOptions {
+export interface BulletOptions {
   readonly id?: number;
   readonly pos?: Vector2 | { readonly x: number; readonly y: number };
   readonly vel?: Vector2 | { readonly x: number; readonly y: number };
@@ -43,6 +43,35 @@ export class Bullet extends Entity {
     this.ttl = ttl;
     if (homing) {
       this.homing = homing;
+    }
+  }
+
+  reset({
+    pos = new Vector2(),
+    vel = new Vector2(),
+    angle = 0,
+    ownerId = null,
+    commandSeq = 0,
+    damage = 1,
+    ttl = 1.8,
+    homing = null,
+  }: BulletOptions = {}): void {
+    this.resetForSpawn({
+      pos,
+      vel,
+      angle,
+      radius: 3,
+      kind: "bullet",
+      collidable: true,
+    });
+    this.ownerId = ownerId;
+    this.commandSeq = commandSeq;
+    this.damage = damage;
+    this.ttl = ttl;
+    if (homing) {
+      this.homing = homing;
+    } else {
+      delete this.homing;
     }
   }
 

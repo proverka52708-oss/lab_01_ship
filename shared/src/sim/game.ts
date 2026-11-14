@@ -3,7 +3,7 @@ import { createHomingBehavior } from "./homing.ts";
 import { Ship } from "./ship.ts";
 import { Vector2 } from "./vector.ts";
 import { World } from "./world.ts";
-import type { InputState, WorldSnapshot } from "./snapshot-types.ts";
+import type { InputState } from "./snapshot-types.ts";
 import type { CollisionEvent } from "./collision.ts";
 
 export interface GameSessionOptions {

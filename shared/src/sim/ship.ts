@@ -111,22 +111,7 @@ export class Ship extends Entity {
       }
     }
 
-    const state = integrateState(
-      {
-        x: this.pos.x,
-        y: this.pos.y,
-        vx: this.vel.x,
-        vy: this.vel.y,
-        angle: this.angle,
-      },
-      shipInput ?? { isDown: () => false },
-      dt,
-    );
-    this.angle = state.angle;
-    this.thrust = state.thrust;
-    this.vel = new Vector2(state.vx, state.vy);
-    this.pos.x = ((state.x % world.width) + world.width) % world.width;
-    this.pos.y = ((state.y % world.height) + world.height) % world.height;
+    integrateShipInPlace(this, shipInput ?? NO_INPUT, dt, world.width, world.height);
   }
 
   fire(world: World, commandSeq = 0): Bullet | null {
@@ -137,7 +122,7 @@ export class Ship extends Entity {
     const direction = Vector2.fromAngle(this.angle);
     const rapidFire = this.effects.has("rapid-fire");
     this.weapon.cooldown = this.weapon.baseInterval * (rapidFire ? 0.42 : 1);
-    const bullet = new Bullet({
+    const bullet = world.createBullet({
       pos: this.pos.add(direction.scale(this.radius + 5)),
       vel: this.vel.add(direction.scale(460)),
       angle: this.angle,
@@ -255,6 +240,57 @@ function integrateState(
     angle,
     thrust: Number(isThrusting),
   };
+}
+
+function integrateShipInPlace(
+  ship: Ship,
+  input: InputState,
+  dt: number,
+  width: number,
+  height: number,
+): void {
+  if (!Number.isFinite(dt) || dt < 0) {
+    throw new RangeError("dt must be a non-negative finite number.");
+  }
+
+  const turn =
+    Number(input.isDown("ArrowRight") || input.isDown("KeyD")) -
+    Number(input.isDown("ArrowLeft") || input.isDown("KeyA"));
+  const isThrusting = input.isDown("ArrowUp") || input.isDown("KeyW");
+  const isBraking = input.isDown("Space");
+  const angle = ship.angle + turn * SHIP_TUNING.rotationSpeed * dt;
+  const drag = Math.exp(
+    -(SHIP_TUNING.drag + (isBraking ? SHIP_TUNING.brakeStrength : 0)) * dt,
+  );
+  let vx =
+    (ship.vel.x +
+      Math.cos(angle) *
+        SHIP_TUNING.thrustAcceleration *
+        Number(isThrusting) *
+        dt) *
+    drag;
+  let vy =
+    (ship.vel.y +
+      Math.sin(angle) *
+        SHIP_TUNING.thrustAcceleration *
+        Number(isThrusting) *
+        dt) *
+    drag;
+  const speed = Math.hypot(vx, vy);
+
+  if (speed > SHIP_TUNING.maxSpeed) {
+    const speedScale = SHIP_TUNING.maxSpeed / speed;
+    vx *= speedScale;
+    vy *= speedScale;
+  }
+
+  ship.angle = angle;
+  ship.thrust = Number(isThrusting);
+  ship.vel.set(vx, vy);
+  ship.pos.set(
+    ((ship.pos.x + vx * dt) % width + width) % width,
+    ((ship.pos.y + vy * dt) % height + height) % height,
+  );
 }
 
 // Lab 01 compatibility adapter; the class and adapter share exactly the same physics tuning.

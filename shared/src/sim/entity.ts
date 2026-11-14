@@ -60,6 +60,24 @@ export class Entity {
     this.idWasRestored = true;
   }
 
+  resetForSpawn({
+    pos = this.pos,
+    vel = this.vel,
+    angle = 0,
+    radius = this.radius,
+    kind = this.kind,
+    collidable = radius > 0,
+  }: Omit<EntityOptions, "id"> = {}): void {
+    this.pos.set(pos.x, pos.y);
+    this.vel.set(vel.x, vel.y);
+    this.angle = angle;
+    this.radius = radius;
+    this.kind = kind;
+    this.collidable = collidable;
+    this.alive = true;
+    this.idWasRestored = false;
+  }
+
   toSnapshot(): BaseEntitySnapshot {
     return {
       id: this.id,
@@ -92,6 +110,6 @@ export class Entity {
     _input?: InputState | Map<string, InputState>,
     _world?: World,
   ): void {
-    this.pos.addInPlace(this.vel.scale(dt));
+    this.pos.addScaledInPlace(this.vel, dt);
   }
 }

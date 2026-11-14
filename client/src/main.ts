@@ -15,7 +15,7 @@ import { Lobby, type LobbyRoom } from './lobby/lobby.ts'
 import { mountLobbyView } from './lobby/view.ts'
 import { GameEvents } from './audio/game-events.ts'
 import { createAudioPlayer } from './audio/audio-player.ts'
-import { SocketClient, type Codec } from './net/socket-client.ts'
+import { SocketClient, type Codec, type PlayerIdentity } from './net/socket-client.ts'
 import { NetworkEmulator } from './network-emulator.ts'
 import { createNetworkGameSession } from './game/network-game-session.ts'
 import { decodeBinary, encodeBinary } from '@dogfight/shared/codec'
@@ -118,6 +118,7 @@ let lobbyView: ReturnType<typeof mountLobbyView> | null = null
 let loadedResources: LoadedAssets | null = null
 let loadingController: AbortController | null = null
 let socketClient: SocketClient | null = null
+let botWorker: Worker | null = null
 const networkEmulator = new NetworkEmulator()
 let netgraphTimer: ReturnType<typeof setInterval> | null = null
 
@@ -350,7 +351,7 @@ async function joinGame({
   backButton.className = 'back-button'
   backButton.textContent = 'Leave game'
   backButton.addEventListener('click', returnToLobby)
-  tools.append(backButton)
+  tools.append(backButton, createBotControls(room, player))
 
   currentGame = createNetworkGameSession({
     canvasView,
@@ -368,7 +369,87 @@ async function joinGame({
   netgraphTimer = setInterval(updateNetgraph, 250)
 }
 
+function createBotControls(room: LobbyRoom, player: PlayerIdentity): HTMLElement {
+  const controls = document.createElement('section')
+  controls.className = 'bot-controls'
+  const start = document.createElement('button')
+  start.type = 'button'
+  start.textContent = 'Start 8 Worker bots'
+  start.disabled = room.capacity - room.players < 8
+  const stop = document.createElement('button')
+  stop.type = 'button'
+  stop.textContent = 'Stop Worker bots'
+  stop.disabled = true
+  const status = document.createElement('output')
+  status.id = 'botStatus'
+  status.setAttribute('aria-live', 'polite')
+  status.textContent = start.disabled
+    ? 'The room needs at least 8 free places for bots.'
+    : 'Bots send the same 30 Hz input protocol as human clients.'
+
+  start.addEventListener('click', () => {
+    if (botWorker) return
+    const worker = new Worker(new URL('./bot.worker.ts', import.meta.url), {
+      type: 'module',
+    })
+    botWorker = worker
+    let connectedBots = 0
+    worker.addEventListener('message', (event: MessageEvent<unknown>) => {
+      const message = event.data
+      if (typeof message !== 'object' || message === null || !('type' in message)) {
+        return
+      }
+      if (message.type === 'bot-connected') {
+        connectedBots += 1
+        status.textContent = `${connectedBots}/8 Worker bots connected`
+      } else if (message.type === 'bot-error') {
+        const detail =
+          'message' in message && typeof message.message === 'string'
+            ? message.message
+            : 'Invalid worker error response'
+        status.textContent = `Bot connection failed: ${detail}`
+        worker.terminate()
+        if (botWorker === worker) botWorker = null
+        start.disabled = room.capacity - room.players < 8
+        stop.disabled = true
+      } else if (message.type === 'bots-stopped') {
+        worker.terminate()
+        if (botWorker === worker) botWorker = null
+        start.disabled = room.capacity - room.players < 8
+        stop.disabled = true
+        status.textContent = 'Worker bots stopped.'
+      }
+    })
+    worker.addEventListener('error', (event) => {
+      status.textContent = `Worker failed: ${event.message}`
+      worker.terminate()
+      if (botWorker === worker) botWorker = null
+      start.disabled = room.capacity - room.players < 8
+      stop.disabled = true
+    })
+    worker.postMessage({
+      type: 'start',
+      roomId: room.id,
+      playerName: player.name,
+      url: `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`,
+      count: 8,
+    })
+    start.disabled = true
+    stop.disabled = false
+    status.textContent = 'Connecting 8 Worker bots...'
+  })
+
+  stop.addEventListener('click', () => {
+    botWorker?.postMessage({ type: 'stop' })
+  })
+  controls.append(start, stop, status)
+  return controls
+}
+
 function returnToLobby(): void {
+  botWorker?.postMessage({ type: 'stop' })
+  botWorker?.terminate()
+  botWorker = null
   socketClient?.leave()
   if (netgraphTimer !== null) clearInterval(netgraphTimer)
   netgraphTimer = null
@@ -448,6 +529,8 @@ function measureCodecs(): void {
 }
 
 window.addEventListener('beforeunload', () => {
+  botWorker?.postMessage({ type: 'stop' })
+  botWorker?.terminate()
   loadingController?.abort()
   lobby?.destroy()
   currentGame?.stop()

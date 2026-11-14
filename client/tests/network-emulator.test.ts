@@ -1,5 +1,5 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'vitest';
 import { NetworkEmulator } from '../src/network-emulator.ts';
 
 interface FakeTimer {

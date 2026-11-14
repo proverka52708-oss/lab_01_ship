@@ -98,7 +98,7 @@ export class Room extends EventEmitter {
   }
 
   close(): void {
-    for (const client of [...this.#clients.keys()]) this.leave(client);
+    for (const client of this.#clients.keys()) this.leave(client);
     this.removeAllListeners();
   }
 

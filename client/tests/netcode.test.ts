@@ -1,5 +1,5 @@
-import test from 'node:test'
 import assert from 'node:assert/strict'
+import { test } from 'vitest'
 import type { BinaryMessage } from '@dogfight/shared/codec'
 import { GameSnapshotSchema, SnapshotAckSchema, SnapshotEntitySchema, type WireInputFields } from '@dogfight/shared/protocol'
 import type { Input } from '../src/input.ts'

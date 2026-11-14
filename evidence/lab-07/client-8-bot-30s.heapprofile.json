@@ -1,0 +1,752 @@
+{
+  "profile": {
+    "head": {
+      "callFrame": {
+        "functionName": "(root)",
+        "scriptId": "0",
+        "url": "",
+        "lineNumber": -1,
+        "columnNumber": -1
+      },
+      "selfSize": 0,
+      "id": 1,
+      "children": [
+        {
+          "callFrame": {
+            "functionName": "sampleFrame",
+            "scriptId": "4",
+            "url": "",
+            "lineNumber": 6,
+            "columnNumber": 24
+          },
+          "selfSize": 9560,
+          "id": 436,
+          "children": []
+        },
+        {
+          "callFrame": {
+            "functionName": "",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+            "lineNumber": 73,
+            "columnNumber": 38896
+          },
+          "selfSize": 3128,
+          "id": 85,
+          "children": [
+            {
+              "callFrame": {
+                "functionName": "Dl",
+                "scriptId": "5",
+                "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                "lineNumber": 73,
+                "columnNumber": 36736
+              },
+              "selfSize": 2072,
+              "id": 86,
+              "children": [
+                {
+                  "callFrame": {
+                    "functionName": "e",
+                    "scriptId": "5",
+                    "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                    "lineNumber": 73,
+                    "columnNumber": 16873
+                  },
+                  "selfSize": 0,
+                  "id": 87,
+                  "children": [
+                    {
+                      "callFrame": {
+                        "functionName": "t",
+                        "scriptId": "5",
+                        "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                        "lineNumber": 19,
+                        "columnNumber": 14706
+                      },
+                      "selfSize": 0,
+                      "id": 88,
+                      "children": [
+                        {
+                          "callFrame": {
+                            "functionName": "e._zod.parse",
+                            "scriptId": "5",
+                            "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                            "lineNumber": 71,
+                            "columnNumber": 156
+                          },
+                          "selfSize": 0,
+                          "id": 89,
+                          "children": [
+                            {
+                              "callFrame": {
+                                "functionName": "",
+                                "scriptId": "50",
+                                "url": "",
+                                "lineNumber": 2,
+                                "columnNumber": 16
+                              },
+                              "selfSize": 0,
+                              "id": 90,
+                              "children": [
+                                {
+                                  "callFrame": {
+                                    "functionName": "e._zod.parse",
+                                    "scriptId": "5",
+                                    "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                                    "lineNumber": 21,
+                                    "columnNumber": 8000
+                                  },
+                                  "selfSize": 0,
+                                  "id": 91,
+                                  "children": [
+                                    {
+                                      "callFrame": {
+                                        "functionName": "e._zod.parse",
+                                        "scriptId": "5",
+                                        "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                                        "lineNumber": 71,
+                                        "columnNumber": 2620
+                                      },
+                                      "selfSize": 0,
+                                      "id": 92,
+                                      "children": [
+                                        {
+                                          "callFrame": {
+                                            "functionName": "e._zod.parse",
+                                            "scriptId": "5",
+                                            "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                                            "lineNumber": 71,
+                                            "columnNumber": 156
+                                          },
+                                          "selfSize": 0,
+                                          "id": 93,
+                                          "children": [
+                                            {
+                                              "callFrame": {
+                                                "functionName": "",
+                                                "scriptId": "54",
+                                                "url": "",
+                                                "lineNumber": 2,
+                                                "columnNumber": 16
+                                              },
+                                              "selfSize": 1040,
+                                              "id": 94,
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "callFrame": {
+            "functionName": "p",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+            "lineNumber": 73,
+            "columnNumber": 45266
+          },
+          "selfSize": 2112,
+          "id": 54,
+          "children": [
+            {
+              "callFrame": {
+                "functionName": "l",
+                "scriptId": "5",
+                "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                "lineNumber": 73,
+                "columnNumber": 53311
+              },
+              "selfSize": 0,
+              "id": 58,
+              "children": [
+                {
+                  "callFrame": {
+                    "functionName": "u",
+                    "scriptId": "5",
+                    "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                    "lineNumber": 0,
+                    "columnNumber": 4377
+                  },
+                  "selfSize": 0,
+                  "id": 59,
+                  "children": [
+                    {
+                      "callFrame": {
+                        "functionName": "o",
+                        "scriptId": "5",
+                        "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+                        "lineNumber": 0,
+                        "columnNumber": 2402
+                      },
+                      "selfSize": 7404,
+                      "id": 117,
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "callFrame": {
+            "functionName": "Cu",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:49458/assets/index-BytUsxLs.js",
+            "lineNumber": 119,
+            "columnNumber": 4099
+          },
+          "selfSize": 3492,
+          "id": 353,
+          "children": []
+        },
+        {
+          "callFrame": {
+            "functionName": "listener",
+            "scriptId": "7",
+            "url": "",
+            "lineNumber": 8235,
+            "columnNumber": 21
+          },
+          "selfSize": 0,
+          "id": 133,
+          "children": [
+            {
+              "callFrame": {
+                "functionName": "listener",
+                "scriptId": "7",
+                "url": "",
+                "lineNumber": 7931,
+                "columnNumber": 19
+              },
+              "selfSize": 1040,
+              "id": 134,
+              "children": []
+            }
+          ]
+        },
+        {
+          "callFrame": {
+            "functionName": "",
+            "scriptId": "15",
+            "url": "",
+            "lineNumber": 0,
+            "columnNumber": 1
+          },
+          "selfSize": 0,
+          "id": 4,
+          "children": [
+            {
+              "callFrame": {
+                "functionName": "evaluate",
+                "scriptId": "8",
+                "url": "",
+                "lineNumber": 363,
+                "columnNumber": 10
+              },
+              "selfSize": 3160,
+              "id": 5,
+              "children": [
+                {
+                  "callFrame": {
+                    "functionName": "_jsonValueNoThrow",
+                    "scriptId": "8",
+                    "url": "",
+                    "lineNumber": 391,
+                    "columnNumber": 19
+                  },
+                  "selfSize": 0,
+                  "id": 1766,
+                  "children": [
+                    {
+                      "callFrame": {
+                        "functionName": "jsonValue",
+                        "scriptId": "8",
+                        "url": "",
+                        "lineNumber": 386,
+                        "columnNumber": 11
+                      },
+                      "selfSize": 0,
+                      "id": 1767,
+                      "children": [
+                        {
+                          "callFrame": {
+                            "functionName": "serializeAsCallArgument",
+                            "scriptId": "8",
+                            "url": "",
+                            "lineNumber": 199,
+                            "columnNumber": 32
+                          },
+                          "selfSize": 0,
+                          "id": 1768,
+                          "children": [
+                            {
+                              "callFrame": {
+                                "functionName": "serialize",
+                                "scriptId": "8",
+                                "url": "",
+                                "lineNumber": 202,
+                                "columnNumber": 18
+                              },
+                              "selfSize": 0,
+                              "id": 1769,
+                              "children": [
+                                {
+                                  "callFrame": {
+                                    "functionName": "innerSerialize",
+                                    "scriptId": "8",
+                                    "url": "",
+                                    "lineNumber": 213,
+                                    "columnNumber": 23
+                                  },
+                                  "selfSize": 0,
+                                  "id": 1770,
+                                  "children": [
+                                    {
+                                      "callFrame": {
+                                        "functionName": "serialize",
+                                        "scriptId": "8",
+                                        "url": "",
+                                        "lineNumber": 202,
+                                        "columnNumber": 18
+                                      },
+                                      "selfSize": 0,
+                                      "id": 1771,
+                                      "children": [
+                                        {
+                                          "callFrame": {
+                                            "functionName": "innerSerialize",
+                                            "scriptId": "8",
+                                            "url": "",
+                                            "lineNumber": 213,
+                                            "columnNumber": 23
+                                          },
+                                          "selfSize": 0,
+                                          "id": 1772,
+                                          "children": [
+                                            {
+                                              "callFrame": {
+                                                "functionName": "serialize",
+                                                "scriptId": "8",
+                                                "url": "",
+                                                "lineNumber": 202,
+                                                "columnNumber": 18
+                                              },
+                                              "selfSize": 1728,
+                                              "id": 1775,
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "callFrame": {
+                    "functionName": "",
+                    "scriptId": "16",
+                    "url": "",
+                    "lineNumber": 0,
+                    "columnNumber": 0
+                  },
+                  "selfSize": 0,
+                  "id": 11,
+                  "children": [
+                    {
+                      "callFrame": {
+                        "functionName": "querySelectorAll",
+                        "scriptId": "7",
+                        "url": "",
+                        "lineNumber": 7242,
+                        "columnNumber": 18
+                      },
+                      "selfSize": 0,
+                      "id": 12,
+                      "children": [
+                        {
+                          "callFrame": {
+                            "functionName": "end",
+                            "scriptId": "7",
+                            "url": "",
+                            "lineNumber": 5633,
+                            "columnNumber": 5
+                          },
+                          "selfSize": 1064,
+                          "id": 51,
+                          "children": []
+                        },
+                        {
+                          "callFrame": {
+                            "functionName": "_queryEngineAll",
+                            "scriptId": "7",
+                            "url": "",
+                            "lineNumber": 7290,
+                            "columnNumber": 17
+                          },
+                          "selfSize": 0,
+                          "id": 14,
+                          "children": [
+                            {
+                              "callFrame": {
+                                "functionName": "queryAll",
+                                "scriptId": "7",
+                                "url": "",
+                                "lineNumber": 5576,
+                                "columnNumber": 14
+                              },
+                              "selfSize": 0,
+                              "id": 15,
+                              "children": [
+                                {
+                                  "callFrame": {
+                                    "functionName": "queryRole",
+                                    "scriptId": "7",
+                                    "url": "",
+                                    "lineNumber": 5518,
+                                    "columnNumber": 18
+                                  },
+                                  "selfSize": 0,
+                                  "id": 23,
+                                  "children": [
+                                    {
+                                      "callFrame": {
+                                        "functionName": "query",
+                                        "scriptId": "7",
+                                        "url": "",
+                                        "lineNumber": 5560,
+                                        "columnNumber": 16
+                                      },
+                                      "selfSize": 0,
+                                      "id": 24,
+                                      "children": [
+                                        {
+                                          "callFrame": {
+                                            "functionName": "match",
+                                            "scriptId": "7",
+                                            "url": "",
+                                            "lineNumber": 5520,
+                                            "columnNumber": 16
+                                          },
+                                          "selfSize": 0,
+                                          "id": 25,
+                                          "children": [
+                                            {
+                                              "callFrame": {
+                                                "functionName": "getElementAccessibleNameText",
+                                                "scriptId": "7",
+                                                "url": "",
+                                                "lineNumber": 3777,
+                                                "columnNumber": 37
+                                              },
+                                              "selfSize": 0,
+                                              "id": 34,
+                                              "children": [
+                                                {
+                                                  "callFrame": {
+                                                    "functionName": "computeAccessibleNameComposite",
+                                                    "scriptId": "7",
+                                                    "url": "",
+                                                    "lineNumber": 3749,
+                                                    "columnNumber": 39
+                                                  },
+                                                  "selfSize": 0,
+                                                  "id": 35,
+                                                  "children": [
+                                                    {
+                                                      "callFrame": {
+                                                        "functionName": "getTextAlternativeInternal",
+                                                        "scriptId": "7",
+                                                        "url": "",
+                                                        "lineNumber": 3874,
+                                                        "columnNumber": 35
+                                                      },
+                                                      "selfSize": 0,
+                                                      "id": 37,
+                                                      "children": [
+                                                        {
+                                                          "callFrame": {
+                                                            "functionName": "innerAccumulatedElementText",
+                                                            "scriptId": "7",
+                                                            "url": "",
+                                                            "lineNumber": 4110,
+                                                            "columnNumber": 36
+                                                          },
+                                                          "selfSize": 1368,
+                                                          "id": 38,
+                                                          "children": []
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "callFrame": {
+            "functionName": "(V8 API)",
+            "scriptId": "0",
+            "url": "",
+            "lineNumber": -1,
+            "columnNumber": -1
+          },
+          "selfSize": 2244,
+          "id": 2,
+          "children": []
+        },
+        {
+          "callFrame": {
+            "functionName": "(PARSER)",
+            "scriptId": "0",
+            "url": "",
+            "lineNumber": -1,
+            "columnNumber": -1
+          },
+          "selfSize": 1264,
+          "id": 1762,
+          "children": []
+        },
+        {
+          "callFrame": {
+            "functionName": "(BYTECODE_COMPILER)",
+            "scriptId": "0",
+            "url": "",
+            "lineNumber": -1,
+            "columnNumber": -1
+          },
+          "selfSize": 6508,
+          "id": 3,
+          "children": []
+        }
+      ]
+    },
+    "samples": [
+      {
+        "size": 1032,
+        "nodeId": 54,
+        "ordinal": 65958
+      },
+      {
+        "size": 1080,
+        "nodeId": 54,
+        "ordinal": 65957
+      },
+      {
+        "size": 1728,
+        "nodeId": 1775,
+        "ordinal": 65876
+      },
+      {
+        "size": 1040,
+        "nodeId": 5,
+        "ordinal": 65782
+      },
+      {
+        "size": 1056,
+        "nodeId": 5,
+        "ordinal": 65781
+      },
+      {
+        "size": 1064,
+        "nodeId": 5,
+        "ordinal": 65780
+      },
+      {
+        "size": 1264,
+        "nodeId": 1762,
+        "ordinal": 65779
+      },
+      {
+        "size": 7404,
+        "nodeId": 117,
+        "ordinal": 45596
+      },
+      {
+        "size": 1056,
+        "nodeId": 436,
+        "ordinal": 37048
+      },
+      {
+        "size": 1152,
+        "nodeId": 353,
+        "ordinal": 36631
+      },
+      {
+        "size": 1040,
+        "nodeId": 94,
+        "ordinal": 33679
+      },
+      {
+        "size": 1036,
+        "nodeId": 436,
+        "ordinal": 27574
+      },
+      {
+        "size": 1056,
+        "nodeId": 85,
+        "ordinal": 26253
+      },
+      {
+        "size": 1176,
+        "nodeId": 436,
+        "ordinal": 13782
+      },
+      {
+        "size": 1040,
+        "nodeId": 2,
+        "ordinal": 101
+      },
+      {
+        "size": 1032,
+        "nodeId": 3,
+        "ordinal": 100
+      },
+      {
+        "size": 1036,
+        "nodeId": 85,
+        "ordinal": 937
+      },
+      {
+        "size": 1032,
+        "nodeId": 86,
+        "ordinal": 573
+      },
+      {
+        "size": 1036,
+        "nodeId": 436,
+        "ordinal": 19756
+      },
+      {
+        "size": 1056,
+        "nodeId": 436,
+        "ordinal": 16055
+      },
+      {
+        "size": 1056,
+        "nodeId": 436,
+        "ordinal": 13783
+      },
+      {
+        "size": 1040,
+        "nodeId": 3,
+        "ordinal": 3
+      },
+      {
+        "size": 1056,
+        "nodeId": 436,
+        "ordinal": 5171
+      },
+      {
+        "size": 1080,
+        "nodeId": 436,
+        "ordinal": 5170
+      },
+      {
+        "size": 1056,
+        "nodeId": 436,
+        "ordinal": 5169
+      },
+      {
+        "size": 1036,
+        "nodeId": 85,
+        "ordinal": 3453
+      },
+      {
+        "size": 1080,
+        "nodeId": 353,
+        "ordinal": 3239
+      },
+      {
+        "size": 1260,
+        "nodeId": 353,
+        "ordinal": 3241
+      },
+      {
+        "size": 1200,
+        "nodeId": 3,
+        "ordinal": 106
+      },
+      {
+        "size": 1064,
+        "nodeId": 51,
+        "ordinal": 35
+      },
+      {
+        "size": 1040,
+        "nodeId": 86,
+        "ordinal": 572
+      },
+      {
+        "size": 1116,
+        "nodeId": 3,
+        "ordinal": 119
+      },
+      {
+        "size": 1080,
+        "nodeId": 3,
+        "ordinal": 118
+      },
+      {
+        "size": 1368,
+        "nodeId": 38,
+        "ordinal": 24
+      },
+      {
+        "size": 1040,
+        "nodeId": 134,
+        "ordinal": 105
+      },
+      {
+        "size": 1040,
+        "nodeId": 3,
+        "ordinal": 99
+      },
+      {
+        "size": 1204,
+        "nodeId": 2,
+        "ordinal": 2
+      }
+    ]
+  }
+}
