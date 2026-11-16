@@ -1,9 +1,15 @@
 import { createReadStream, statSync } from "node:fs";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { extname, resolve, sep } from "node:path";
 import { pipeline } from "node:stream";
 import { MatchLogManager } from "./match-logger.ts";
 import { MatchManager } from "./match.ts";
+import { logger } from "./logging.ts";
+import { ServerMetrics } from "./metrics.ts";
 import { RoomManager } from "./room-manager.ts";
 import { attachWebSocketServer } from "./websocket-server.ts";
 import type { ServerConfig } from "./config.ts";
@@ -17,6 +23,7 @@ const MIME_TYPES = new Map([
   [".json", "application/json; charset=utf-8"],
   [".png", "image/png"],
   [".svg", "image/svg+xml"],
+  [".webmanifest", "application/manifest+json; charset=utf-8"],
   [".wav", "audio/wav"],
 ]);
 const MAX_BODY_BYTES = 8 * 1024;
@@ -85,6 +92,7 @@ async function serveStatic(
   response: ServerResponse,
   staticDirectory: string,
   pathname: string,
+  logger: typeof import("./logging.ts").logger,
 ): Promise<void> {
   const filePath = resolveStaticPath(staticDirectory, pathname);
   if (!filePath) {
@@ -113,7 +121,7 @@ async function serveStatic(
   }
   pipeline(createReadStream(filePath), response, (error) => {
     if (error && !response.destroyed) {
-      console.error(`Static file stream failed (${filePath}):`, error.message);
+      logger.error({ err: error, filePath }, "Static file stream failed");
       response.destroy(error);
     }
   });
@@ -161,10 +169,19 @@ function testEndpoint(
 }
 
 export async function createApplication(config: ServerConfig) {
-  const roomManager = await new RoomManager().load(config.roomDefinitions);
+  const metrics = new ServerMetrics();
+  const roomManager = await new RoomManager({
+    maxRooms: config.maxRooms ?? 100,
+    maxPlayers: config.maxPlayers ?? 400,
+    logger,
+    metrics,
+  }).load(config.roomDefinitions);
   const matchManager = new MatchManager(roomManager);
   const logs = new MatchLogManager(config.logDirectory);
-  const activeLogs = new Map<string, Promise<import("./match-logger.ts").MatchLogger>>();
+  const activeLogs = new Map<
+    string,
+    Promise<import("./match-logger.ts").MatchLogger>
+  >();
   roomManager.on("room-removed", (room) => activeLogs.delete(room.id));
 
   async function getMatchLogger(
@@ -173,16 +190,21 @@ export async function createApplication(config: ServerConfig) {
     if (!activeLogs.has(roomId)) {
       activeLogs.set(
         roomId,
-        logs.open(roomId).then((logger) => {
+        logs.open(roomId).then((matchLogger) => {
           for (const eventName of ["join", "leave", "chat", "slow-client"]) {
             const handler = (event: MatchLogEvent) => {
-              void logger
+              void matchLogger
                 .append({ ...event, type: eventName })
-                .catch((error) => logger.emit("error", error));
+                .catch((error: unknown) =>
+                  logger.error(
+                    { err: error, roomId },
+                    "Failed to write match log event",
+                  ),
+                );
             };
             roomManager.get(roomId)?.on(eventName, handler);
           }
-          return logger;
+          return matchLogger;
         }),
       );
     }
@@ -191,7 +213,20 @@ export async function createApplication(config: ServerConfig) {
     return activeLog;
   }
 
-  const server = createServer(async (request, response) => {
+  let acceptingConnections = true;
+  const server = createServer((request, response) => {
+    void handleRequest(request, response).catch((error: unknown) => {
+      logger.error({ err: error }, "HTTP request handler failed");
+      if (response.headersSent)
+        response.destroy(error instanceof Error ? error : undefined);
+      else sendJson(response, 500, { error: "Internal server error" });
+    });
+  });
+
+  async function handleRequest(
+    request: IncomingMessage,
+    response: ServerResponse,
+  ): Promise<void> {
     let rawPath;
     try {
       rawPath = decodeURIComponent((request.url ?? "/").split("?")[0] ?? "/");
@@ -213,7 +248,30 @@ export async function createApplication(config: ServerConfig) {
     }
 
     if (url.pathname === "/health" && request.method === "GET") {
-      sendJson(response, 200, { status: "ok" });
+      sendJson(response, 200, {
+        status: "ok",
+        buildSha: config.buildSha ?? "dev",
+      });
+      return;
+    }
+    if (url.pathname === "/ready" && request.method === "GET") {
+      const ready = acceptingConnections && roomManager.canAcceptPlayer;
+      sendJson(response, ready ? 200 : 503, {
+        status: ready ? "ready" : "not-ready",
+      });
+      return;
+    }
+    if (url.pathname === "/metrics" && request.method === "GET") {
+      const stats = matchManager.stats();
+      sendJson(
+        response,
+        200,
+        metrics.snapshot({
+          rooms: roomManager.list().length,
+          activePlayers: stats.activePlayers,
+          averageStepMs: stats.averageTickDurationMs,
+        }),
+      );
       return;
     }
     if (url.pathname.startsWith("/api/test/") && request.method === "GET") {
@@ -277,10 +335,7 @@ export async function createApplication(config: ServerConfig) {
       });
       pipeline(createReadStream(filePath), response, (error) => {
         if (error && !response.destroyed) {
-          console.error(
-            `Match replay stream failed (${matchId}):`,
-            error.message,
-          );
+          logger.error({ err: error, matchId }, "Match replay stream failed");
           response.destroy(error);
         }
       });
@@ -291,12 +346,25 @@ export async function createApplication(config: ServerConfig) {
       sendJson(response, 405, { error: "Method not allowed" });
       return;
     }
-    await serveStatic(request, response, config.staticDirectory, url.pathname);
-  });
+    await serveStatic(
+      request,
+      response,
+      config.staticDirectory,
+      url.pathname,
+      logger,
+    );
+  }
 
   const websocket = attachWebSocketServer(server, {
     roomManager,
     getMatchLogger,
+    allowedOrigins: config.allowedOrigins,
+    maxConnectionsPerIp: config.maxConnectionsPerIp,
+    trustProxy: config.trustProxy,
+    canAcceptConnections: () =>
+      acceptingConnections && roomManager.canAcceptPlayer,
+    logger,
+    metrics,
   });
 
   return {
@@ -304,11 +372,18 @@ export async function createApplication(config: ServerConfig) {
     roomManager,
     logs,
     websocket,
+    logger,
+    beginShutdown() {
+      acceptingConnections = false;
+    },
     async close() {
+      acceptingConnections = false;
       await websocket.close();
       matchManager.close();
       roomManager.close();
+      metrics.close();
       await logs.close();
+      await new Promise<void>((resolve) => logger.flush(() => resolve()));
     },
   };
 }

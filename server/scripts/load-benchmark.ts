@@ -343,6 +343,8 @@ async function main(): Promise<void> {
     staticDirectory,
     roomDefinitions,
     websocketPath: "/ws",
+    maxConnectionsPerIp: 256,
+    maxPlayers: 128,
   });
   const bots: Array<{ socket: WebSocket; stop(): void }> = [];
   let browser: Browser | null = null;

@@ -1,0 +1,125 @@
+name: Publish and deploy
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:latest
+          build-args: |
+            BUILD_SHA=${{ github.sha }}
+      - name: Enforce image size limit
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+        run: |
+          docker pull "$IMAGE"
+          bytes=$(docker image inspect "$IMAGE" --format '{{.Size}}')
+          echo "Docker image size: $bytes bytes"
+          test "$bytes" -lt 209715200
+      - name: Verify container health and SIGTERM shutdown
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+        run: |
+          docker run -d --name star-runner-stop-test \
+            -e ALLOWED_ORIGINS=https://example.com "$IMAGE"
+          for attempt in $(seq 1 20); do
+            status=$(docker inspect --format '{{.State.Health.Status}}' star-runner-stop-test)
+            if [ "$status" = healthy ]; then break; fi
+            sleep 1
+          done
+          if [ "$status" != healthy ]; then
+            docker logs star-runner-stop-test
+            docker rm -f star-runner-stop-test
+            exit 1
+          fi
+          docker stop --time 10 star-runner-stop-test
+          exit_code=$(docker inspect --format '{{.State.ExitCode}}' star-runner-stop-test)
+          docker rm star-runner-stop-test
+          test "$exit_code" = 0
+      - name: Trigger Render deployment for this commit
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RENDER_SERVICE_URL: ${{ vars.RENDER_SERVICE_URL }}
+          BUILD_SHA: ${{ github.sha }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "Render deploy hook is not configured; skipping deployment."
+            exit 0
+          fi
+          curl --fail --show-error --silent --get \
+            --data-urlencode "ref=$BUILD_SHA" \
+            "$RENDER_DEPLOY_HOOK_URL"
+          if [ -z "$RENDER_SERVICE_URL" ]; then
+            echo "Render service URL is not configured; skipping health verification."
+            exit 0
+          fi
+          health_url="${RENDER_SERVICE_URL%/}/health"
+          for attempt in $(seq 1 90); do
+            response=$(curl --fail --silent --show-error --max-time 10 "$health_url" 2>/dev/null || true)
+            deployed_sha=$(printf '%s' "$response" | jq -r '.buildSha // empty' 2>/dev/null || true)
+            if [ "$deployed_sha" = "$BUILD_SHA" ]; then
+              echo "Render is serving build $BUILD_SHA"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Render did not report build SHA $BUILD_SHA at $health_url" >&2
+          exit 1
+
+  deploy:
+    needs: publish
+    if: ${{ vars.DEPLOY_HOST != '' && vars.DEPLOY_USER != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Deploy container
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          IMAGE: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+        run: |
+          test -n "$ALLOWED_ORIGINS"
+          case "$ALLOWED_ORIGINS" in
+            *[!A-Za-z0-9.,:/-]*) echo "ALLOWED_ORIGINS contains unsupported characters" >&2; exit 1 ;;
+          esac
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" \
+            "docker pull '$IMAGE' && \
+             (docker stop --time 10 star-runner >/dev/null 2>&1 || true) && \
+             (docker rm star-runner >/dev/null 2>&1 || true) && \
+             docker run -d --name star-runner --restart unless-stopped \
+               -p 3000:3000 -e TRUST_PROXY=true \
+               -e ALLOWED_ORIGINS='$ALLOWED_ORIGINS' '$IMAGE'"

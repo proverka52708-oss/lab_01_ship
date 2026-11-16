@@ -1,6 +1,6 @@
 declare module "ws" {
   import { EventEmitter } from "node:events";
-  import type { IncomingMessage } from "node:http";
+  import type { ClientRequest, IncomingMessage } from "node:http";
   import type { Duplex } from "node:stream";
 
   export type RawData = Buffer | ArrayBuffer | Buffer[];
@@ -11,17 +11,24 @@ declare module "ws" {
     static readonly CLOSING: number;
     static readonly CLOSED: number;
 
-    constructor(address: string);
+    constructor(address: string, options?: { origin?: string });
     readonly readyState: number;
     readonly bufferedAmount: number;
     send(data: string | Buffer, callback?: (error?: Error) => void): void;
     close(code?: number, reason?: string): void;
     terminate(): void;
     ping(): void;
-    on(event: "message", listener: (data: RawData, isBinary: boolean) => void): this;
+    on(
+      event: "message",
+      listener: (data: RawData, isBinary: boolean) => void,
+    ): this;
     on(event: "pong" | "open", listener: () => void): this;
     on(event: "close", listener: (code: number, reason: Buffer) => void): this;
     on(event: "error", listener: (error: Error) => void): this;
+    on(
+      event: "unexpected-response",
+      listener: (request: ClientRequest, response: IncomingMessage) => void,
+    ): this;
   }
 
   export class WebSocketServer extends EventEmitter {

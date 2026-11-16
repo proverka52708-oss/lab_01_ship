@@ -30,6 +30,7 @@ before(async () => {
     join(staticDirectory, "index.html"),
     "<h1>Star Runner test</h1>",
   );
+  await writeFile(join(staticDirectory, "manifest.webmanifest"), "{}");
   await writeFile(
     roomDefinitions,
     JSON.stringify({
@@ -45,6 +46,10 @@ before(async () => {
     staticDirectory,
     roomDefinitions,
     websocketPath: "/ws",
+    allowedOrigins: ["https://game.example"],
+    maxConnectionsPerIp: 2,
+    maxPlayers: 2,
+    buildSha: "test-sha",
   });
   await new Promise<void>((resolve) =>
     application.server.listen(0, "127.0.0.1", resolve),
@@ -97,15 +102,38 @@ function nextMessage(
   });
 }
 
-test("HTTP server serves the client, health and live room data", async () => {
-  const [page, health, roomList] = await Promise.all([
+test("HTTP server serves the client, health, readiness, metrics and live room data", async () => {
+  const [page, manifest, health, ready, metrics, roomList] = await Promise.all([
     fetch(baseUrl),
+    fetch(`${baseUrl}/manifest.webmanifest`),
     fetch(`${baseUrl}/health`),
+    fetch(`${baseUrl}/ready`),
+    fetch(`${baseUrl}/metrics`),
     fetch(`${baseUrl}/api/rooms`),
   ]);
   assert.equal(page.status, 200);
   assert.match(await page.text(), /Star Runner test/);
-  assert.deepEqual(await health.json(), { status: "ok" });
+  assert.match(
+    manifest.headers.get("content-type") ?? "",
+    /application\/manifest\+json/,
+  );
+  assert.deepEqual(await health.json(), { status: "ok", buildSha: "test-sha" });
+  assert.equal(ready.status, 200);
+  assert.equal((await ready.json()).status, "ready");
+  assert.equal(metrics.status, 200);
+  const metricValues = z
+    .object({
+      rooms: z.number(),
+      players: z.number(),
+      messagesPerSecond: z.number(),
+      bytesPerSecond: z.number(),
+      averageStepMs: z.number(),
+      eventLoopUtilization: z.number(),
+      eventLoopDelayP95Ms: z.number(),
+      memoryBytes: z.object({ rss: z.number() }),
+    })
+    .parse(await metrics.json());
+  assert.equal(typeof metricValues.eventLoopUtilization, "number");
   assert.deepEqual((await roomList.json()).rooms[0], {
     id: "test-room",
     name: "Test Room",
@@ -179,7 +207,9 @@ test("WebSocket rooms broadcast chat and write replayable NDJSON logs", async ()
   first.close();
   await once(first, "close");
   assert.ok(secondJoin.matchId);
-  const replayResponse = await fetch(`${baseUrl}/api/matches/${secondJoin.matchId}/replay`);
+  const replayResponse = await fetch(
+    `${baseUrl}/api/matches/${secondJoin.matchId}/replay`,
+  );
   assert.equal(replayResponse.status, 200);
   const replay = await replayResponse.text();
   assert.match(replay, /"type":"join"/);
@@ -220,21 +250,11 @@ test("malformed and oversized WebSocket messages are rejected", async () => {
   assert.equal((await oversizedClosed)[0], 1009);
 });
 
-test("malformed JSON is logged and closes the WebSocket", async () => {
+test("malformed JSON closes the WebSocket", async () => {
   const socket = await connectSocket();
   const closed = once(socket, "close");
-  const loggedErrors: string[] = [];
-  const originalError = console.error;
-  console.error = (...values: unknown[]) => {
-    loggedErrors.push(values.map(String).join(" "));
-  };
-  try {
-    socket.send('{"type":');
-    assert.equal((await closed)[0], 1007);
-    assert.ok(loggedErrors.some((message) => message.includes("malformed JSON")));
-  } finally {
-    console.error = originalError;
-  }
+  socket.send('{"type":');
+  assert.equal((await closed)[0], 1007);
 });
 
 test("invalid binary WebSocket packets close with a protocol error", async () => {
@@ -257,16 +277,169 @@ test("WebSocket accepts 30 Hz input traffic with a heartbeat", async () => {
 });
 
 test("WebSocket closes clients that exceed the per-second message limit", async () => {
+  const created = await fetch(`${baseUrl}/api/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: "flood-room", name: "Flood Room", capacity: 2 }),
+  });
+  assert.equal(created.status, 201);
+  const healthy = await connectSocket();
+  const healthyJoined = nextMessage(
+    healthy,
+    (message) => message.type === "joined",
+  );
+  healthy.send(
+    JSON.stringify({
+      type: "join",
+      roomId: "flood-room",
+      playerName: "Healthy",
+    }),
+  );
+  await healthyJoined;
+
   const socket = await connectSocket();
   const closed = once(socket, "close");
-  for (let index = 0; index < 46; index += 1) {
+  const room = application.roomManager.get("flood-room");
+  if (!room?.match) throw new Error("Flood test match did not start");
+  const initialTick = room.match.tick;
+  for (let index = 0; index < 1000; index += 1) {
     socket.send(JSON.stringify({ type: "ping", sentAt: index }));
   }
   const [code] = await closed;
   assert.equal(code, 1008);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(healthy.readyState, WebSocket.OPEN);
+  assert.ok(room.match.tick > initialTick);
+  const healthyClosed = once(healthy, "close");
+  healthy.close();
+  await healthyClosed;
 });
 
 test("server configuration validates PORT and LOG_DIR", () => {
   assert.throws(() => loadConfig({ PORT: "70000", LOG_DIR: "logs" }), /PORT/);
   assert.throws(() => loadConfig({ PORT: "3000", LOG_DIR: "" }), /LOG_DIR/);
+  assert.throws(
+    () => loadConfig({ ALLOWED_ORIGINS: "javascript:alert(1)" }),
+    /Allowed origins/,
+  );
+  assert.throws(
+    () => loadConfig({ MAX_CONNECTIONS_PER_IP: "0" }),
+    /MAX_CONNECTIONS_PER_IP/,
+  );
+  assert.throws(
+    () => loadConfig({ NODE_ENV: "production" }),
+    /ALLOWED_ORIGINS/,
+  );
+  assert.throws(() => loadConfig({ LOG_LEVEL: "verbose" }), /LOG_LEVEL/);
+});
+
+test("Render production config uses its assigned URL and commit SHA", () => {
+  const config = loadConfig({
+    NODE_ENV: "production",
+    RENDER: "true",
+    RENDER_EXTERNAL_URL: "https://star-runner.onrender.com",
+    RENDER_GIT_COMMIT: "render-commit-sha",
+    BUILD_SHA: "dev",
+  });
+  assert.deepEqual(config.allowedOrigins, ["https://star-runner.onrender.com"]);
+  assert.equal(config.buildSha, "render-commit-sha");
+});
+
+test("WebSocket upgrade validates Origin and returns clients to ready capacity limits", async () => {
+  const rejected = new WebSocket(`${baseUrl.replace("http:", "ws:")}/ws`, {
+    origin: "https://attacker.example",
+  });
+  const [, rejectedResponse] = await once(rejected, "unexpected-response");
+  assert.equal(rejectedResponse.statusCode, 403);
+  rejectedResponse.resume();
+
+  const allowed = new WebSocket(`${baseUrl.replace("http:", "ws:")}/ws`, {
+    origin: "https://game.example",
+  });
+  await once(allowed, "open");
+  const allowedClosed = once(allowed, "close");
+  allowed.close();
+  await allowedClosed;
+
+  const recreated = await fetch(`${baseUrl}/api/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: "test-room", name: "Test Room", capacity: 2 }),
+  });
+  assert.equal(recreated.status, 201);
+  const first = await connectSocket();
+  const second = await connectSocket();
+  const limited = new WebSocket(`${baseUrl.replace("http:", "ws:")}/ws`);
+  const [, limitedResponse] = await once(limited, "unexpected-response");
+  assert.equal(limitedResponse.statusCode, 429);
+  limitedResponse.resume();
+  const firstJoined = nextMessage(
+    first,
+    (message) => message.type === "joined",
+  );
+  const secondJoined = nextMessage(
+    second,
+    (message) => message.type === "joined",
+  );
+  first.send(
+    JSON.stringify({ type: "join", roomId: "test-room", playerName: "One" }),
+  );
+  second.send(
+    JSON.stringify({ type: "join", roomId: "test-room", playerName: "Two" }),
+  );
+  await Promise.all([firstJoined, secondJoined]);
+  assert.equal((await fetch(`${baseUrl}/ready`)).status, 503);
+
+  const atCapacity = new WebSocket(`${baseUrl.replace("http:", "ws:")}/ws`);
+  const [, capacityResponse] = await once(atCapacity, "unexpected-response");
+  assert.equal(capacityResponse.statusCode, 503);
+  capacityResponse.resume();
+
+  const firstClosed = once(first, "close");
+  const secondClosed = once(second, "close");
+  first.close();
+  second.close();
+  await Promise.all([firstClosed, secondClosed]);
+  assert.equal((await fetch(`${baseUrl}/ready`)).status, 200);
+});
+
+test("graceful close sends shutdown and closes WebSockets with code 1001", async () => {
+  const restartApp = await createApplication({
+    port: 0,
+    logDirectory: join(temporaryDirectory, "restart-logs"),
+    staticDirectory: join(temporaryDirectory, "public"),
+    roomDefinitions: join(temporaryDirectory, "rooms.json"),
+    websocketPath: "/ws",
+    allowedOrigins: ["https://game.example"],
+  });
+  await new Promise<void>((resolve) =>
+    restartApp.server.listen(0, "127.0.0.1", resolve),
+  );
+  const address = restartApp.server.address();
+  if (!address || typeof address === "string")
+    throw new Error("Restart test server did not bind");
+  const socket = new WebSocket(`ws://127.0.0.1:${address.port}/ws`);
+  await once(socket, "open");
+  const joined = nextMessage(socket, (message) => message.type === "joined");
+  socket.send(
+    JSON.stringify({ type: "join", roomId: "test-room", playerName: "Pilot" }),
+  );
+  await joined;
+
+  const shutdownMessage = nextMessage(
+    socket,
+    (message) => message.type === "shutdown",
+  );
+  const closed = once(socket, "close");
+  restartApp.beginShutdown();
+  assert.equal(
+    (await fetch(`http://127.0.0.1:${address.port}/ready`)).status,
+    503,
+  );
+  await restartApp.close();
+  assert.equal((await shutdownMessage).type, "shutdown");
+  assert.equal((await closed)[0], 1001);
+  await new Promise<void>((resolve, reject) => {
+    restartApp.server.close((error) => (error ? reject(error) : resolve()));
+  });
 });

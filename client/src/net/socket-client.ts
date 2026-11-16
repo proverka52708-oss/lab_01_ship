@@ -21,6 +21,7 @@ export type ServerMessage =
   | JoinedMessage
   | SnapshotMessage
   | { type: 'pong'; sentAt: number }
+  | { type: 'shutdown'; message: string }
   | { type: 'player-joined'; player: PlayerIdentity }
   | { type: 'player-left'; player: Pick<PlayerIdentity, 'name'> }
   | { type: 'chat'; player: string; text: string }
@@ -64,6 +65,10 @@ export function parseServerMessage(value: unknown): ServerMessage {
     case 'pong':
       if (typeof value.sentAt !== 'number') throw new TypeError('Server pong is invalid')
       return { type: 'pong', sentAt: value.sentAt }
+    case 'shutdown':
+      if (typeof value.message !== 'string')
+        throw new TypeError('Server shutdown message is invalid')
+      return { type: 'shutdown', message: value.message }
     case 'joined': {
       if (
         !isLobbyRoom(value.room) ||

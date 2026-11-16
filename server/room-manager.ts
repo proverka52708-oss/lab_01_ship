@@ -1,6 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { EventEmitter } from "node:events";
 import { z } from "zod";
+import type { Logger } from "pino";
+import { logger as defaultLogger } from "./logging.ts";
+import type { ServerMetrics } from "./metrics.ts";
 import { Room, type RoomDefinition } from "./room.ts";
 
 const RoomDefinitionSchema = z.object({
@@ -16,6 +19,28 @@ const RoomFileSchema = z.object({
 
 export class RoomManager extends EventEmitter {
   #rooms = new Map<string, Room>();
+  #maxRooms: number;
+  #maxPlayers: number;
+  #logger: Logger;
+  #recordOutboundBytes: (bytes: number) => void;
+
+  constructor({
+    maxRooms = 100,
+    maxPlayers = 400,
+    logger = defaultLogger,
+    metrics,
+  }: {
+    maxRooms?: number;
+    maxPlayers?: number;
+    logger?: Logger;
+    metrics?: ServerMetrics;
+  } = {}) {
+    super();
+    this.#maxRooms = maxRooms;
+    this.#maxPlayers = maxPlayers;
+    this.#logger = logger;
+    this.#recordOutboundBytes = (bytes) => metrics?.recordMessage(bytes);
+  }
 
   async load(definitionsPath: string): Promise<this> {
     const content = await readFile(definitionsPath, "utf8");
@@ -32,7 +57,20 @@ export class RoomManager extends EventEmitter {
     return this.#rooms.get(id);
   }
 
+  get playerCount(): number {
+    return [...this.#rooms.values()].reduce(
+      (total, room) => total + room.size,
+      0,
+    );
+  }
+
+  get canAcceptPlayer(): boolean {
+    return this.playerCount < this.#maxPlayers;
+  }
+
   create(definition: unknown): Room {
+    if (this.#rooms.size >= this.#maxRooms)
+      throw new Error("The server has reached its room limit");
     const {
       id,
       name,
@@ -57,12 +95,16 @@ export class RoomManager extends EventEmitter {
     if (this.#rooms.has(id))
       throw new Error("A room with that id already exists");
 
-    const room = new Room({
-      id,
-      name: name.trim(),
-      capacity,
-      arena,
-    } satisfies RoomDefinition);
+    const room = new Room(
+      {
+        id,
+        name: name.trim(),
+        capacity,
+        arena,
+      } satisfies RoomDefinition,
+      this.#logger,
+      this.#recordOutboundBytes,
+    );
     room.once("empty", () => {
       if (this.#rooms.get(id) !== room) return;
       this.#rooms.delete(id);

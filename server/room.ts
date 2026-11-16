@@ -1,5 +1,7 @@
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
+import type { Logger } from "pino";
+import { logger as defaultLogger } from "./logging.ts";
 import type { WebSocket } from "ws";
 import type { Match } from "./match.ts";
 
@@ -12,14 +14,22 @@ export class Room extends EventEmitter {
   capacity: number;
   arena: ArenaName;
   match: Match | null = null;
+  #recordOutboundBytes: (bytes: number) => void;
 
-  constructor({ id, name, capacity, arena }: RoomDefinition) {
+  constructor(
+    { id, name, capacity, arena }: RoomDefinition,
+    logger: Logger = defaultLogger,
+    recordOutboundBytes: (bytes: number) => void = () => {},
+  ) {
     super();
     this.id = id;
     this.name = name;
     this.capacity = capacity;
     this.arena = arena;
-    this.on("error", (error) => console.error(`Room ${this.id}:`, error));
+    this.#recordOutboundBytes = recordOutboundBytes;
+    this.on("error", (error) =>
+      logger.error({ err: error, roomId: this.id }, "Room socket send failed"),
+    );
   }
 
   get size() {
@@ -104,12 +114,12 @@ export class Room extends EventEmitter {
 
   #send(client: WebSocket, message: object | string): void {
     if (client.readyState !== 1 || client.bufferedAmount > 128 * 1024) return;
-    client.send(
-      typeof message === "string" ? message : JSON.stringify(message),
-      (error) => {
-        if (error) this.emit("error", error);
-      },
-    );
+    const payload =
+      typeof message === "string" ? message : JSON.stringify(message);
+    this.#recordOutboundBytes(Buffer.byteLength(payload));
+    client.send(payload, (error) => {
+      if (error) this.emit("error", error);
+    });
   }
 }
 

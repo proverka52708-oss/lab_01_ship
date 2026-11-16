@@ -21,6 +21,12 @@ import { createNetworkGameSession } from './game/network-game-session.ts'
 import { decodeBinary, encodeBinary } from '@dogfight/shared/codec'
 import { parseServerMessage } from './net/socket-client.ts'
 
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  void navigator.serviceWorker.register('/service-worker.js').catch((error: unknown) => {
+    console.error('Service worker registration failed:', error)
+  })
+}
+
 function getElement(selector: string): HTMLElement {
   const element = document.querySelector(selector)
   if (!element) throw new Error(`Required page element is missing: ${selector}`)
@@ -165,13 +171,25 @@ function setupSocketClient() {
         break
       case 'pong':
         break
+      case 'shutdown':
+        notice.textContent = message.message
+        break
       default:
         unreachable(message)
     }
   })
-  client.addEventListener('close', () => {
+  client.addEventListener('close', (event) => {
     getElement('#networkNotice').textContent =
       'Connection lost. Reconnecting and restoring your room...'
+    if (
+      event instanceof CustomEvent &&
+      event.detail instanceof CloseEvent &&
+      (event.detail.code === 1001 || event.detail.code === 1006)
+    ) {
+      returnToLobby()
+      getElement('#networkNotice').textContent =
+        'The server restarted or became unreachable. You are back in the lobby; reconnecting...'
+    }
   })
   client.addEventListener('socket-error', (event) => {
     if (event instanceof CustomEvent && typeof event.detail === 'string') {

@@ -5,18 +5,17 @@ import { Transform, PassThrough } from "node:stream";
 import { pipeline } from "node:stream";
 import { once } from "node:events";
 import { join } from "node:path";
-import { EventEmitter } from "node:events";
+import { logger } from "./logging.ts";
 
 export type MatchLogEvent = Record<string, unknown>;
 
-export class MatchLogger extends EventEmitter {
+export class MatchLogger {
   #source: PassThrough;
   #pipelineDone: Promise<void>;
   #closed = false;
   matchId: string;
 
   constructor(filePath: string) {
-    super();
     this.matchId = (filePath.split(/[\\/]/).at(-1) ?? "unknown").replace(
       /\.ndjson$/,
       "",
@@ -35,14 +34,18 @@ export class MatchLogger extends EventEmitter {
     this.#pipelineDone = new Promise<void>((resolve, reject) => {
       pipeline(this.#source, toNdjson, destination, (error) => {
         if (error) {
-          this.emit("error", error);
           reject(error);
         } else {
           resolve();
         }
       });
     });
-    this.#pipelineDone.catch(() => {});
+    this.#pipelineDone.catch((error: unknown) => {
+      logger.error(
+        { err: error, matchId: this.matchId },
+        "Match log pipeline failed",
+      );
+    });
   }
 
   async append(event: MatchLogEvent): Promise<void> {
@@ -72,9 +75,6 @@ export class MatchLogManager {
     await mkdir(this.#directory, { recursive: true });
     const matchId = `${roomId}-${Date.now()}-${randomUUID().slice(0, 8)}`;
     const logger = new MatchLogger(join(this.#directory, `${matchId}.ndjson`));
-    logger.on("error", (error) =>
-      console.error(`Match log ${matchId}:`, error),
-    );
     this.#logs.set(matchId, logger);
     return logger;
   }

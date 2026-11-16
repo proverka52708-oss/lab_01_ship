@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: star-runner-lab-08
+    runtime: docker
+    plan: free
+    region: frankfurt
+    autoDeployTrigger: off
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: TRUST_PROXY
+        value: "true"
